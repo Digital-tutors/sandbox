@@ -136,15 +136,14 @@ class Checker(object):
 
             if result[0].returncode !=0:
                 mssg = "Compilation error"
-                set_stdout(code_return=str(result[0].returncode), message_out=mssg, runtime=str(result[1]), memory=str(max_usage))
+                get_result(code_return=str(result[0].returncode), message_out=mssg, runtime=str(result[1]), memory=str(max_usage))
                 return result
 
-            tests = get_tests()
-            task_tests = tests[str(task_num)]
-            test_input = task_tests['input']
-            required_output = task_tests['output']
+            tests = self.get_tests()
+            test_input = tests['input']
+            required_output = tests['output']
 
             what_to_run = os.path.join('.', exec_file_full_name) if is_compilable else ' '.join([compiler_path, args])
-            run_code(what_to_run=what_to_run, test_input_arr=test_input, required_output=required_output)
-            set_stdout(code_return=str(result[0].returncode), message_out=result[1], runtime=str(result[2]), memory=str(result[3]))
+            self.run_code(what_to_run=what_to_run, test_input_arr=test_input, required_output=required_output)
+            self.get_result(code_return=str(result[0].returncode), message_out=result[1], runtime=str(result[2]), memory=str(result[3]))
             return result[1]
