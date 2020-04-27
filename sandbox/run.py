@@ -1,5 +1,5 @@
-from checker_core import run_on_simple_tests 
-import os, logging, uuid
+from sandbox.services import checker
+import os
 import argparse
 
 def main():
@@ -9,17 +9,16 @@ def main():
     parser.add_argument('-task_num', dest="taskId", help='Task ID')
     parser.add_argument('-corr_id', dest="correlationID", help='Correlation ID for rabbit')
     parser.add_argument('-user_id', dest="userID", help='User ID')
+    parser.add_argument('-is_test_creation', dest="is_test_creation", help='Checking whay we run: task solver or test generator')
 
     args, unknown = parser.parse_known_args()
-    logging.info(args)
     task_id = str(args.taskId)
     lang = str(args.lang)
     file_name = str(args.name)
     corr_id = str(args.correlationID)
     user_id = str(args.userID)
-    
-    data = run_on_simple_tests(task_num=task_id, lang=lang, file_name=file_name, userId=user_id, corr_id=corr_id)
-    print(data)
+    is_test_creation = True if args.is_test_creation == "True" else False
+    sandbox = checker.Checker(task_id=task_id, lang=lang, file_name=file_name, user_id=user_id, corr_id=corr_id, is_test_creation=is_test_creation)
 
 if __name__=="__main__":
     main()

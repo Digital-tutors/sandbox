@@ -1,49 +1,74 @@
 #!/usr/bin/env python
-import pika, traceback, sys, json
-import os, logging
+import pika
+import traceback
+import sys
+import json
+import os
+import logging
+import pathlib
+from autochecker_io import save_code_in_file
 from DockerSandbox import DockerSandbox
 from logger import initialize_logger
-import pathlib
-import pickle
-import stat
+from dotenv import load_dotenv
+
+dotenv_path = os.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path)
+
+code_storage_path = os.getenv("CODE_STORAGE_PATH")
+network = os.getenv("DOCKER_NETWORK")
+task_queue = os.getenv("TASK_QUEUE")
+queue_exchange = os.getenv("QUEUE_EXCHANGE")
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 channel = connection.channel()
+channel.queue_declare(queue=task_queue, durable=True)
 
-channel.queue_declare(queue='program.tasks', durable=True)
-print(' [*] Waiting for messages. To exit press CTRL+C')
 
 def callback(ch, method, props, body):
-    body = json.loads(body.decode('utf-8'))
-    print(type(body))
-    print(" [x] Received %r" % body)
+    body = json.loads(body.decode("utf-8"))
     lang = str(body[1]).lower()
-    task_num = body[0]
+    task_id = body[0]
+    user_id = 0
+    attempt = 0
     code = body[2]
-    # id задачи + id пользователя + номер попытки
-    __code_file_name = body[2]
-    #checker_core.save_code_in_file()
-    
-    dir_path = "/home/radmirkashapov/Projects/Test/target/{dir}/".format(dir=__code_file_name)
-    if(not os.path.exists(dir_path)):
-        pathlib.Path("/home/radmirkashapov/Projects/Test/target/{dir}/".format(dir=__code_file_name)).mkdir(parents=True, exist_ok=True)
+    is_test_creation = False
 
-    
-    docker_Sandbox = DockerSandbox(compiler_name = "python3", path = "~/Projects/Test/target", file_name=__code_file_name, corr_id=body[4], user_id=body[5])
+    code_file_name = task_id + "_" + user_id
+    if (is_test_creation):
+        file_name = code_file_name + "_" + "test"
+    # id задачи + id пользователя + номер попытки
+    else:
+        file_name = code_file_name + "_" + attempt
+    dir_path = code_storage_path + "{dir}/".format(dir=code_file_name)
+    if (not os.path.exists(dir_path)):
+        pathlib.Path(dir_path).mkdir(parents=True, exist_ok=True)
+
+    save_code_in_file(
+        code=code,
+        lang=lang,
+        file_name=file_name,
+        dir_path=dir_path)
+
+    docker_Sandbox = DockerSandbox(
+        compiler_name=lang,
+        path=dir_path,
+        file_name=file_name,
+        task_id=task_id,
+        corr_id=body[4],
+        user_id=body[5],
+        is_test_creation=is_test_creation)
     docker_Sandbox.execute()
-    logging.info(res)
-    print("OK")
-    response="OK"
-    ch.basic_publish(exchange='program',
-                     routing_key='program.tasks',
-                     properties=pika.BasicProperties(correlation_id = props.correlation_id),
+
+    response = "OK"
+    ch.basic_publish(exchange=queue_exchange,
+                     routing_key=task_queue,
+                     properties=pika.BasicProperties(correlation_id=props.correlation_id),
                      body=response)
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
 channel.basic_qos(prefetch_count=1)
-channel.basic_consume(queue='program.tasks', on_message_callback=callback)
-
+channel.basic_consume(queue=task_queue, on_message_callback=callback)
 
 try:
     channel.start_consuming()
