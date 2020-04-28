@@ -18,7 +18,8 @@ def main():
     corr_id = str(args.correlationID)
     user_id = str(args.userID)
     is_test_creation = True if args.is_test_creation == "True" else False
-    sandbox = checker.Checker(task_id=task_id, lang=lang, file_name=file_name, user_id=user_id, corr_id=corr_id, is_test_creation=is_test_creation)
+    if not is_test_creation:
+        sandbox = checker.Checker(task_id=task_id, lang=lang, file_name=file_name, user_id=user_id, corr_id=corr_id)
 
 if __name__=="__main__":
     main()

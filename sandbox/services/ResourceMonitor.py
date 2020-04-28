@@ -1,9 +1,6 @@
 import resource
-from ctypes import Union
 from time import sleep
 import datetime
-from concurrent.futures import Future
-from subprocess import CompletedProcess
 
 class ResourceMonitor:
     def __init__(self, timeout, memory):

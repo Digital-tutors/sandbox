@@ -1,24 +1,31 @@
 import datetime
 import subprocess
-
 from sandbox.services.configurer import parse_config
 from sandbox.services.ResourceMonitor import ResourceMonitor
 from concurrent.futures import ThreadPoolExecutor
+from sandbox.controllers.TaskController import get_task_by_url
+from sandbox.services.sender import Sender
 import os
 
 
 class Checker:
     def __init__(self, task_id: str = None, lang: str = None, file_name: str = None, user_id: str = None,
-                 corr_id: str = None, is_test_creation: bool = None):
+                 corr_id: str = None):
         self.__task_id = task_id
         self.__lang = lang
         self.__file_name = file_name
         self.__user_id = user_id
         self.__corr_id = corr_id
-        self.__is_test_creation = is_test_creation
+        # set url
+        task = get_task_by_url("{}".format(str(self.__task_id)))
+        self.__tests = task.tests
+        self.__time_limit = task.options["timeLimit"]
+        self.__memory_limit = task.options["memoryLimit"]
 
-        self.__tests
-        self.__timeout
+    def get_result(self, code_return: str = None, message_out: str = None, time_usage: str = "", memory_usage: str = ""):
+        attempt: str = "0"
+        sender = Sender(task_id=self.__task_id, corr_id=self.__corr_id, user_id=self.__user_id, code_return=code_return, message_out=message_out, time_usage=time_usage, memory_usage=memory_usage)
+        sender.send_students_result()
 
     def test_code(self) -> str:
         config = parse_config()
@@ -40,9 +47,8 @@ class Checker:
                                 memory=str(result[1]))
                 return result
 
-            tests = self.get_tests()
-            test_input = tests['input']
-            required_output = tests['output']
+            test_input = self.__tests['input']
+            required_output = self.__tests['output']
 
             what_to_run = os.path.join('.', exec_file_full_name) if is_compilable else ' '.join([compiler_path, args])
             self.run_code(what_to_run=what_to_run, test_input_arr=test_input, required_output=required_output)
@@ -53,7 +59,7 @@ class Checker:
     def run_code(self, what_to_run: str, test_input_arr: list, required_output: list):
         test_i = 0
         test_j = 0
-        monitor = ResourceMonitor(self.__timeout, self.__memory)
+        monitor = ResourceMonitor(self.__time_limit, self.__memory_limit)
         with ThreadPoolExecutor() as executor:
             if len(test_input_arr) != 0:
                 for i in range(len(test_input_arr)):
@@ -101,7 +107,7 @@ class Checker:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
-                timeout=self.__timeout,
+                timeout=self.__time_limit,
                 preexec_fn=monitor.set_memory_limit)
         except subprocess.TimeoutExpired:
             monitor.keep_measuring = False
@@ -110,7 +116,7 @@ class Checker:
 
     def compile_file(self, compiler_path, args):
         with ThreadPoolExecutor() as executor:
-            monitor = ResourceMonitor(self.__timeout, self.__memory)
+            monitor = ResourceMonitor(self.__time_limit, self.__memory_limit)
             mem_thread = executor.submit(monitor.memory_usage)
             time_thread = executor.submit(monitor.timeout_usage)
             fn_thread = executor.submit(self.compile, compiler_path, args, monitor)
@@ -129,7 +135,7 @@ class Checker:
                                          stdout=subprocess.PIPE,
                                          stderr=subprocess.STDOUT,
                                          universal_newlines=True,
-                                         timeout=self.__timeout,
+                                         timeout=self.__time_limit,
                                          preexec_fn=monitor.set_memory_limit)
         except subprocess.TimeoutExpired:
             monitor.keep_measuring = False

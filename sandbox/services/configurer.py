@@ -1,7 +1,12 @@
 import json
+from dotenv import load_dotenv
+import os
 
 def get_config_path():
-    return app.dev_settings.CONFIG_PATH
+    dotenv_path = os.join(os.path.dirname(__file__), ".env")
+    load_dotenv(dotenv_path)
+    config_path = os.getenv("CONFIG_PATH")
+    return config_path
 
 
 def parse_config(file_name: str, lang: str, task_id: str, user_id: str, attempt: str) -> dict:
@@ -19,7 +24,7 @@ def parse_config(file_name: str, lang: str, task_id: str, user_id: str, attempt:
     result = {
         "code_path": code_path,
         "source_code_path": source_code_path,
-        "compiler_path": compiler_path
+        "compiler_path": compiler_path,
         "lang_config": config["lang_configs"][lang]
     }
     return result
