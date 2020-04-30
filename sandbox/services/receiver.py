@@ -40,6 +40,6 @@ class Receiver(object):
 
 
 def send_message(result, corr_id):
-    tutor_rpc = Receiver()
-    response = tutor_rpc.call(result, corr_id)
+    receiver = Receiver()
+    response = receiver.call(result, corr_id)
     return response

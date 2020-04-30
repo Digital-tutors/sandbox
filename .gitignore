@@ -1,4 +1,5 @@
 .idea
-./.env
-./sanbox/.env
+.env
+sanbox/services/.env
+Dockerfile
 

@@ -34,7 +34,7 @@ class ResourceMonitor:
             if max_time > self.timeout_value:
                 self.keep_measuring = False
                 return -1
-            sleep(1.0)
+            sleep(0.01)
         return max_time
 
     # Set virtual memory limit

@@ -1,6 +1,8 @@
-from sandbox.services.receiver import send_message
+from services.receiver import send_message
+
+
 class Sender:
-    def __init__(self, task_id, corr_id, user_id, code_return, message_out, time_usage, memory_usage):
+    def __init__(self, task_id, corr_id, user_id, solution_id, code_return, message_out, time_usage, memory_usage):
         self.task_id = task_id,
         self.user_id = user_id
         self.code_return = code_return
@@ -8,11 +10,14 @@ class Sender:
         self.time_usage = time_usage
         self.memory_usage = memory_usage
         self.corr_id = corr_id
+        self.solution_id = solution_id
 
     def send_students_result(self):
         message = {
+            "id": self.solution_id,
             "taskId": self.task_id,
             "userId": self.user_id,
+            "completed": True if self.code_return == 0 else False,
             "codeReturn": self.code_return,
             "messageOut": self.message_out,
             "runtime": self.time_usage,

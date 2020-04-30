@@ -1,7 +1,8 @@
-from ... import CONFIG_PATH
+#from ... import CONFIG_PATH
 import json
 import os
 
+CONFIG_PATH = "/home/radmirkashapov/Projects/AutoChecker/config.json"
 
 def save_code_in_file(code: str, lang: str, file_name: str, dir_path: str):
     extension = get_extension(CONFIG_PATH, lang)
