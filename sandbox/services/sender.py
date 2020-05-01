@@ -3,7 +3,7 @@ from services.receiver import send_message
 
 class Sender:
     def __init__(self, task_id, corr_id, user_id, solution_id, code_return, message_out, time_usage, memory_usage):
-        self.task_id = task_id,
+        self.task_id = task_id
         self.user_id = user_id
         self.code_return = code_return
         self.message_out = message_out
@@ -15,7 +15,7 @@ class Sender:
     def send_students_result(self):
         message = {
             "id": self.solution_id,
-            "taskId": self.task_id,
+            "taskId": str(self.task_id),
             "userId": self.user_id,
             "completed": True if self.code_return == 0 else False,
             "codeReturn": self.code_return,

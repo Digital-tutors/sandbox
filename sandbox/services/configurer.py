@@ -1,6 +1,7 @@
 import json
 from dotenv import load_dotenv
 import os
+import shutil
 
 def get_config_path():
     dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -8,6 +9,12 @@ def get_config_path():
     config_path = os.getenv("CONFIG_PATH")
     return config_path
 
+def get_file_dir(file_name):
+    config_path = get_config_path()
+    with open(config_path, 'r', encoding="utf-8") as f:
+        config = json.load(f)
+    dir_path = config["code_path"] + file_name + "/"
+    return dir_path
 
 def parse_config(file_name: str, lang: str) -> dict:
     config_path = get_config_path()
@@ -28,3 +35,11 @@ def parse_config(file_name: str, lang: str) -> dict:
         "lang_config": config["lang_configs"][lang]
     }
     return result
+
+def delete_file(solution_id):
+
+    try:
+        path_to_dir = get_file_dir(solution_id)
+        shutil.rmtree(path_to_dir)
+    except OSError as e:
+        print("Error: %s - %s." % (e.filename, e.strerror))

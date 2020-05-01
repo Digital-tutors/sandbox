@@ -13,14 +13,6 @@ class Receiver(object):
         result = self.channel.queue_declare(queue='program.results', durable=True)
         self.callback_queue = result.method.queue
 
-        self.channel.basic_consume(
-            queue=self.callback_queue,
-            on_message_callback=self.on_response,
-            auto_ack=True)
-
-    def on_response(self, ch, method, props, body):
-        if self.corr_id == props.correlation_id:
-            self.response = body
 
     def call(self, mssg, corr_id):
         self.response = None
@@ -34,12 +26,8 @@ class Receiver(object):
                 delivery_mode=2
             ),
             body=json.dumps(mssg))
-        while self.response is None:
-            self.connection.process_data_events()
-        return str(self.response)
 
 
 def send_message(result, corr_id):
     receiver = Receiver()
-    response = receiver.call(result, corr_id)
-    return response
+    receiver.call(result, corr_id)

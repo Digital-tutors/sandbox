@@ -7,8 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 import controllers.TaskController
 from services.sender import Sender
 import os
-from unittest import TestCase
-from unittest.mock import patch, Mock
+
+from services.configurer import delete_file
 
 
 class Checker:
@@ -102,6 +102,7 @@ class Checker:
             result = self.compile_file(compiler_path, args)
             if result[0].returncode != 0:
                 mssg = "Compilation error"
+                delete_file(self.__solution_id)
                 self.get_result(code_return=str(result[0].returncode), message_out=mssg, time_usage=str(result[1]),
                                 memory_usage=str(result[1]))
                 return result
@@ -111,6 +112,7 @@ class Checker:
 
         what_to_run = os.path.join('.', exec_file_full_name) if is_compilable else ' '.join([compiler_path, args])
         result = self.run_code(what_to_run=what_to_run, test_input_arr=test_input, required_output=required_output)
+        delete_file(self.__solution_id)
         self.get_result(code_return=str(result[0].returncode), message_out=result[1], time_usage=str(result[2]),
                         memory_usage=str(result[3]))
         return result[1]
