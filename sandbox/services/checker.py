@@ -17,7 +17,7 @@ class Checker:
         self.__corr_id = corr_id
         self.__solution_id = solution_id
         taskObj = TaskController()
-        self.task = taskObj.get_task_by_url("http://172.17.0.1:3000/")
+        self.task = taskObj.get_task_by_url("http://172.17.0.1:3000/task/{taskId}/admin/".format(taskId=self.__task_id))
         self.__tests = self.task.tests
         self.__time_limit = self.task.options["timeLimit"]
         self.__memory_limit = self.task.options["memoryLimit"]
