@@ -9,7 +9,7 @@
       "args_format":  "$source_file_full_name -o $exec_file_full_name",
       "is_compilable": true
     },
-    "c++": 
+    "cpp":
     {
       "name": "c++",
       "extension": ".cpp",
@@ -25,7 +25,7 @@
       "args_format": "$source_file_full_name",
       "is_compilable": false
     },
-    "python3": 
+    "python":
     {
       "name": "python3",
       "extension": ".py",

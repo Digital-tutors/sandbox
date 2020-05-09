@@ -11,6 +11,9 @@ class Receiver(object):
         self.channel = self.connection.channel()
 
         result = self.channel.queue_declare(queue='program.results', durable=True)
+        self.channel.queue_bind(exchange='program',
+                           queue='program.results',
+                           routing_key='program.results')
         self.callback_queue = result.method.queue
 
 

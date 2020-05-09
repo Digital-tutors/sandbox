@@ -4,13 +4,16 @@ import docker
 
 TARGET_FILE_PATH = "/sandbox/target/"
 IMAGES = {
-    "c++": "autochecker-cpp",
+    "cpp": "autochecker-cpp",
     "c": "autochecker-clang",
-    "python3": "autochecker-student-python"
+    "python": "autochecker-student-python"
 }
+
+
 class DockerSandbox(object):
 
-    def __init__(self, compiler_name, container_name, hostname, path, solution_id, file_name, task_id, corr_id, user_id, is_test_creation, network):
+    def __init__(self, compiler_name, path, solution_id, file_name, task_id, corr_id, user_id, is_test_creation,
+                 network):
         self.__client = docker.from_env()
         self.__compiler_name = str(compiler_name).lower()
         self.__file_name = str(file_name)
@@ -18,9 +21,7 @@ class DockerSandbox(object):
         self.__task_id = task_id
         self.__corr_id = str(corr_id)
         self.__user_id = user_id
-        self.__solution_id=solution_id
-        self.__hostname = hostname
-        self.__container_name = container_name
+        self.__solution_id = solution_id
         self.__is_test_creation = is_test_creation
         self.__enviroment = [
             "COMPILER={}".format(self.__compiler_name),
@@ -36,13 +37,17 @@ class DockerSandbox(object):
         self.__volume = {
             self.__path: {
                 "bind": self.set_volume(),
-                "mode": "ro"
+                "mode": "rw"
             }
         }
         self.__ports = {
             "15672/tcp": 8088,
             "5672/tcp": 5672
         }
+        self.__extra_hosts = {
+            "host.docker.internal": "127.0.0.1"
+        }
+        self.__security_opt = ["seccomp=unconfined"]
 
     def set_volume(self):
         file_name = self.__file_name
@@ -55,7 +60,4 @@ class DockerSandbox(object):
             environment=self.__enviroment,
             network=self.__network,
             remove=True,
-            # hostname=self.__hostname,
-            # name=self.__container_name,
             volumes=self.__volume)
-        container.logs()

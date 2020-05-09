@@ -3,13 +3,9 @@ import subprocess
 from services.configurer import parse_config
 from services.ResourceMonitor import ResourceMonitor
 from concurrent.futures import ThreadPoolExecutor
-# from controllers.TaskController import get_task_by_url
-import controllers.TaskController
+from controllers.TaskController import TaskController
 from services.sender import Sender
 import os
-
-from services.configurer import delete_file
-
 
 class Checker:
     def __init__(self, task_id: str = None, lang: str = None, file_name: str = None, user_id: str = None,
@@ -20,64 +16,11 @@ class Checker:
         self.__user_id = user_id
         self.__corr_id = corr_id
         self.__solution_id = solution_id
-        # set url
-        # task = get_task_by_url("{}".format(str(self.__task_id)))
-        # task = get_task_by_url("www.google.com")
-        # with patch('controllers.TaskController.get_task') as t_mock:
-        #     t_mock.return_value = {
-        #         "id": 123,
-        #         "topicId": "TopicID",
-        #         "authorId": "UserID",
-        #         "description": "На вход подаются 3 целых числа в пределах границ типа int. Необходимо написать функцию, которая возвращает наибольшее из них.",
-        #         "options": {
-        #             "constructions": [
-        #                 "if",
-        #                 "else",
-        #                 "for"
-        #             ],
-        #             "timeLimit": 200,
-        #             "memoryLimit": 200
-        #         },
-        #         "tests": {
-        #             "input": [
-        #                 "1\n 2\n 4\n",
-        #                 "0\n 0\n 0\n"
-        #             ],
-        #             "output": [
-        #                 "4",
-        #                 "0"
-        #             ]
-        #         }
-        #     }
-        #     task = controllers.TaskController.get_task("cdvv")
-        task = {
-                "id": 123,
-                "topicId": "TopicID",
-                "authorId": "UserID",
-                "description": "На вход подаются 3 целых числа в пределах границ типа int. Необходимо написать функцию, которая возвращает наибольшее из них.",
-                "options": {
-                    "constructions": [
-                        "if",
-                        "else",
-                        "for"
-                    ],
-                    "timeLimit": 2000,
-                    "memoryLimit": 20000
-                },
-                "tests": {
-                    "input": [
-                        "1\n 2\n 4\n",
-                        "0\n 0\n 0\n"
-                    ],
-                    "output": [
-                        "4",
-                        "0"
-                    ]
-                }
-            }
-        self.__tests = task["tests"]
-        self.__time_limit = task["options"]["timeLimit"]
-        self.__memory_limit = task["options"]["memoryLimit"]
+        taskObj = TaskController()
+        self.task = taskObj.get_task_by_url("http://172.17.0.1:3000/")
+        self.__tests = self.task.tests
+        self.__time_limit = self.task.options["timeLimit"]
+        self.__memory_limit = self.task.options["memoryLimit"]
         self.test_code()
 
     def get_result(self, code_return: str = None, message_out: str = None, time_usage: str = "",
@@ -102,7 +45,6 @@ class Checker:
             result = self.compile_file(compiler_path, args)
             if result[0].returncode != 0:
                 mssg = "Compilation error"
-                delete_file(self.__solution_id)
                 self.get_result(code_return=str(result[0].returncode), message_out=mssg, time_usage=str(result[1]),
                                 memory_usage=str(result[1]))
                 return result
@@ -112,7 +54,6 @@ class Checker:
 
         what_to_run = os.path.join('.', exec_file_full_name) if is_compilable else ' '.join([compiler_path, args])
         result = self.run_code(what_to_run=what_to_run, test_input_arr=test_input, required_output=required_output)
-        delete_file(self.__solution_id)
         self.get_result(code_return=str(result[0].returncode), message_out=result[1], time_usage=str(result[2]),
                         memory_usage=str(result[3]))
         return result[1]

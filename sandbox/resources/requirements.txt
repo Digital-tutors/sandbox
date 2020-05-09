@@ -1,7 +1,4 @@
 pika
 pymongo
-asyncio
-aiohttp
 python-dotenv
-mock
-
+requests

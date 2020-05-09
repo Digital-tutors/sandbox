@@ -6,6 +6,7 @@ import json
 import os
 import pathlib
 from autochecker_io import save_code_in_file
+from autochecker_io import delete_file
 from DockerSandbox import DockerSandbox
 from dotenv import load_dotenv
 import uuid
@@ -17,13 +18,14 @@ code_storage_path = os.getenv("CODE_STORAGE_PATH")
 network = os.getenv("DOCKER_NETWORK")
 task_queue = os.getenv("TASK_QUEUE")
 queue_exchange = os.getenv("QUEUE_EXCHANGE")
-hostname = os.getenv("HOSTNAME")
-container_name = os.getenv("CONTAINER_NAME")
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 channel = connection.channel()
 channel.queue_declare(queue=task_queue, durable=True)
 print("Wait for messages")
+channel.queue_bind(exchange=queue_exchange,
+                   queue=task_queue,
+                   routing_key=task_queue)
 
 
 def callback(ch, method, props, body):
@@ -38,7 +40,6 @@ def callback(ch, method, props, body):
     code_file_name = str(solution_id)
     file_name = code_file_name
     dir_path = code_storage_path + "{dir}/".format(dir=code_file_name)
-    print("Directory name: {}".format(dir_path))
     if (not os.path.exists(dir_path)):
         pathlib.Path(dir_path).mkdir(parents=True, exist_ok=True)
 
@@ -55,12 +56,13 @@ def callback(ch, method, props, body):
         task_id=task_id,
         corr_id=uuid.uuid4(),
         user_id=user_id,
-        hostname=hostname,
         solution_id=solution_id,
         is_test_creation=is_test_creation,
-        container_name=container_name,
         network=network)
     docker_Sandbox.execute()
+    delete_file(dir_path)
+    print("Done")
+    ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
 channel.basic_qos(prefetch_count=1)
