@@ -44,10 +44,6 @@ class DockerSandbox(object):
             "15672/tcp": 8088,
             "5672/tcp": 5672
         }
-        self.__extra_hosts = {
-            "host.docker.internal": "127.0.0.1"
-        }
-        self.__security_opt = ["seccomp=unconfined"]
 
     def set_volume(self):
         file_name = self.__file_name

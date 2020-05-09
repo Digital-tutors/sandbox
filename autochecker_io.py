@@ -1,10 +1,14 @@
-#from ... import CONFIG_PATH
 import json
 import os
 import shutil
+from dotenv import load_dotenv
 
 def get_config_path():
-    return "/mnt/c/Users/mylif/source/repos/Projects/AutoChecker/config.json"
+    dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+    load_dotenv(dotenv_path)
+
+    config_path = os.getenv("CONFIG_PATH")
+    return config_path
 
 def save_code_in_file(code: str, lang: str, file_name: str, dir_path: str):
     extension = get_extension(get_config_path(), lang)
