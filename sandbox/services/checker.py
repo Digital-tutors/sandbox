@@ -1,11 +1,10 @@
-import datetime
 import subprocess
 from services.configurer import parse_config
 from services.ResourceMonitor import ResourceMonitor
 from concurrent.futures import ThreadPoolExecutor
 from controllers.TaskController import TaskController
 from services.sender import Sender
-import os
+
 
 class Checker:
     def __init__(self, task_id: str = None, lang: str = None, file_name: str = None, user_id: str = None,
@@ -17,8 +16,7 @@ class Checker:
         self.__corr_id = corr_id
         self.__solution_id = solution_id
         taskObj = TaskController()
-        #self.task = taskObj.get_task_by_url("http://172.17.0.1:3000/task/{taskId}/admin/".format(taskId=self.__task_id))
-        self.task = taskObj.get_task_by_url("http://172.17.0.1:3000")
+        self.task = taskObj.get_task_by_url("http://172.17.0.1:3000/task/{taskId}/admin/".format(taskId=self.__task_id))
         self.__tests = self.task.tests
         self.__time_limit = self.task.options["timeLimit"]
         self.__memory_limit = self.task.options["memoryLimit"]
@@ -70,8 +68,6 @@ class Checker:
         return result[1]
 
     def run_code(self, what_to_run: str, test_input_arr: list, required_output: list):
-        test_i = 0
-        test_j = 0
         monitor = ResourceMonitor(self.__time_limit, self.__memory_limit)
         with ThreadPoolExecutor() as executor:
             if len(test_input_arr) != 0:
@@ -84,11 +80,10 @@ class Checker:
                     max_mem_usage = mem_thread.result()
                     max_time_usage = time_thread.result()
                     if result.returncode != 0:
-                        mssg = "Runtime error, test #{}".format(str(test_i+1))
-                        test_i = test_i + 1
+                        mssg = "Runtime error, test #{}".format(str(i+1))
                         break
                     elif result.stdout != required_output[i]:
-                        mssg = "Wrong answer, test #{}".format(str(test_j+1))
+                        mssg = "Wrong answer, test #{}".format(str(i+1))
                         test_j = i + 1
                         break
                     else:

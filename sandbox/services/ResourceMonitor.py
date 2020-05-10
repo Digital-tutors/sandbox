@@ -2,11 +2,14 @@ import resource
 from time import sleep
 import datetime
 
+TO_MEGABYTES = 1024
+TO_BYTES = 1024 * 1024
+
 class ResourceMonitor:
     def __init__(self, timeout, memory):
         self.keep_measuring = True
         self.timeout_value = timeout
-        self.memory = memory
+        self.memory = memory * TO_BYTES
 
     # Calculate maximum memory usage by program
     # Return memory usage by program
@@ -22,7 +25,7 @@ class ResourceMonitor:
                 return max_usage
             sleep(0.1)
 
-        return max_usage
+        return max_usage / TO_MEGABYTES
 
     # Timer that compute time using to run the program
     # Return time usage. Else return -1
@@ -37,7 +40,7 @@ class ResourceMonitor:
             sleep(0.01)
         return max_time
 
-    # Set virtual memory limit
+    # Set virtual memory limit in bytes
     # If it impossible, will give ValueError
     def set_memory_limit(self):
         resource.setrlimit(resource.RLIMIT_AS, (self.memory, resource.RLIM_INFINITY))
