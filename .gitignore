@@ -1,5 +1,5 @@
 .idea
-__pycashe__
+__pycache__
 .env
 checker
 sanbox/services/.env

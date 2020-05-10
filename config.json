@@ -4,42 +4,78 @@
     "c":
     {
       "name": "c",
-      "extension": ".c",
-      "compile_command": "",
-      "run_command": "",
-      "compiler_path": "/usr/bin/gcc",
-      "args_format":  "$source_file_full_name -o $exec_file_full_name",
-      "is_compilable": true
+      "source_extension": ".c",
+      "is_compilable": true,
+      "is_need_compile": false,
+      "compiler": {
+        "path": "/usr/bin/gcc",
+        "compiler_args": "$source_file_full_name -o $file_full_name",
+        "executable_extension": ".exe"
+      },
+      "run_command": "./$file_full_name"
     },
     "cpp":
     {
       "name": "c++",
-      "extension": ".cpp",
-      "compile_command": "",
-      "run_command": "",
-      "compiler_path": "/usr/bin/g++",
-      "args_format": "$source_file_full_name -o $exec_file_full_name",
-      "is_compilable": true
+      "source_extension": ".cpp",
+      "is_compilable": true,
+      "is_need_compile": false,
+      "compiler": {
+        "path": "/usr/bin/g++",
+        "compiler_args": "$source_file_full_name -o $file_full_name",
+        "executable_extension": ".exe"
+      },
+      "run_command": "./$file_full_name"
     },
-    "c#": 
+    "c#":
     {
       "name": "c#",
-      "extension": ".cs",
-      "compile_command": "",
-      "run_command": "",
-      "compiler_path": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\csc.exe",
-      "args_format": "$source_file_full_name",
-      "is_compilable": false
+      "source_extension": ".cs",
+      "is_compilable": true,
+      "is_need_compile": true,
+      "compiler": {
+        "path": "",
+        "compiler_args": "$source_file_full_name",
+        "executable_extension": ".exe"
+      },
+      "run_command": ""
     },
     "python":
     {
       "name": "python3",
-      "extension": ".py",
-      "compile_command": "",
-      "run_command": "",
-      "compiler_path": "/usr/bin/python3",
-      "args_format": "$source_file_full_name",
-      "is_compilable": false
+      "source_extension": ".py",
+      "is_compilable": false,
+      "is_need_compile": false,
+      "compiler": {
+        "path": "",
+        "compiler_args": "",
+        "executable_extension": ""
+      },
+      "run_command": "/usr/bin/python3 $source_file_full_name"
+    },
+    "kotlin": {
+      "name": "kotlin",
+      "source_extension": ".kt",
+      "is_compilable": true,
+      "is_need_compile": true,
+      "compiler": {
+        "path": "kotlinc",
+        "compiler_args": "$source_file_full_name -include-runtime -d $exec_file_full_name",
+        "executable_extension": ".jar"
+      },
+      "run_command": "java -jar $exec_file_full_name"
+    },
+    "java": {
+      "name": "java",
+      "source_extension": ".java",
+      "is_compilable": true,
+      "is_need_compile": false,
+      "compiler": {
+        "path": "javac",
+        "compiler_args": "$source_file_full_name",
+        "executable_extension": ".jar"
+      },
+      "run_command": "java $source_file_full_name"
     }
   }
 }

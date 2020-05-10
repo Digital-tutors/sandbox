@@ -44,7 +44,7 @@ class Checker:
             compiler_args = __lang_config["compiler"]["compiler_args"] \
                 .replace("$source_file_full_name", source_file_full_name) \
                 .replace("$exec_file_full_name", exec_file_full_name) \
-                .replace("$$file_full_name", file_full_name)
+                .replace("$file_full_name", file_full_name)
             compiler_path = __lang_config["compiler"]["path"]
 
             result = self.compile_file(compiler_path, compiler_args)
@@ -59,10 +59,10 @@ class Checker:
         test_input = self.__tests['input']
         required_output = self.__tests['output']
 
-        run_command = __lang_config["run_command"]["compiler_args"] \
+        run_command = __lang_config["run_command"] \
             .replace("$source_file_full_name", source_file_full_name) \
             .replace("$exec_file_full_name", exec_file_full_name) \
-            .replace("$$file_full_name", file_full_name)
+            .replace("$file_full_name", file_full_name)
 
         result = self.run_code(what_to_run=run_command, test_input_arr=test_input, required_output=required_output)
         self.get_result(code_return=str(result[0].returncode), message_out=result[1], time_usage=str(result[2]),
@@ -84,11 +84,11 @@ class Checker:
                     max_mem_usage = mem_thread.result()
                     max_time_usage = time_thread.result()
                     if result.returncode != 0:
-                        mssg = "Runtime error, test #{}".format(str(test_i))
+                        mssg = "Runtime error, test #{}".format(str(test_i+1))
                         test_i = test_i + 1
                         break
                     elif result.stdout != required_output[i]:
-                        mssg = "Wrong answer, test #{}".format(str(test_j))
+                        mssg = "Wrong answer, test #{}".format(str(test_j+1))
                         test_j = i + 1
                         break
                     else:

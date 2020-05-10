@@ -22,7 +22,7 @@ def get_extension(config_path: str, lang: str):
         config = json.load(f)
 
     lang_config = config["lang_configs"]
-    extension = lang_config[lang]["extension"]
+    extension = lang_config[lang]["source_extension"]
     return extension
 
 

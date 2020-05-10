@@ -29,6 +29,7 @@ channel.queue_bind(exchange=queue_exchange,
 
 
 def callback(ch, method, props, body):
+    print("Got message")
     body = json.loads(body.decode("utf-8"), strict=False)
     solution_id = body["id"]
     task_id = body["taskId"]
