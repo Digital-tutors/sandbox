@@ -1,6 +1,8 @@
 .idea
+__pycashe__
 .env
 checker
 sanbox/services/.env
-Dockerfile
+dockerfiles/student-python/Dockerfile
+dockerfiles
 

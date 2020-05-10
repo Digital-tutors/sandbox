@@ -5,6 +5,8 @@
     {
       "name": "c",
       "extension": ".c",
+      "compile_command": "",
+      "run_command": "",
       "compiler_path": "/usr/bin/gcc",
       "args_format":  "$source_file_full_name -o $exec_file_full_name",
       "is_compilable": true
@@ -13,6 +15,8 @@
     {
       "name": "c++",
       "extension": ".cpp",
+      "compile_command": "",
+      "run_command": "",
       "compiler_path": "/usr/bin/g++",
       "args_format": "$source_file_full_name -o $exec_file_full_name",
       "is_compilable": true
@@ -21,6 +25,8 @@
     {
       "name": "c#",
       "extension": ".cs",
+      "compile_command": "",
+      "run_command": "",
       "compiler_path": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\csc.exe",
       "args_format": "$source_file_full_name",
       "is_compilable": false
@@ -29,6 +35,8 @@
     {
       "name": "python3",
       "extension": ".py",
+      "compile_command": "",
+      "run_command": "",
       "compiler_path": "/usr/bin/python3",
       "args_format": "$source_file_full_name",
       "is_compilable": false

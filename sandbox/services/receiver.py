@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env student-python
 import pika
 import json
 

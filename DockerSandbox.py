@@ -6,7 +6,9 @@ TARGET_FILE_PATH = "/sandbox/target/"
 IMAGES = {
     "cpp": "autochecker-cpp",
     "c": "autochecker-clang",
-    "python": "autochecker-student-python"
+    "student-python": "autochecker-student-student-python",
+    "java": "autochecker-openjdk11-java",
+    "kotlin": "autochecker-kotlin"
 }
 
 

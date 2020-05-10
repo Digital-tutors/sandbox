@@ -17,7 +17,8 @@ class Checker:
         self.__corr_id = corr_id
         self.__solution_id = solution_id
         taskObj = TaskController()
-        self.task = taskObj.get_task_by_url("http://172.17.0.1:3000/task/{taskId}/admin/".format(taskId=self.__task_id))
+        #self.task = taskObj.get_task_by_url("http://172.17.0.1:3000/task/{taskId}/admin/".format(taskId=self.__task_id))
+        self.task = taskObj.get_task_by_url("http://172.17.0.1:3000")
         self.__tests = self.task.tests
         self.__time_limit = self.task.options["timeLimit"]
         self.__memory_limit = self.task.options["memoryLimit"]
@@ -32,28 +33,38 @@ class Checker:
     def test_code(self) -> str:
         config = parse_config(file_name=self.__file_name, lang=self.__lang)
         __lang_config = config["lang_config"]
+
         is_compilable = __lang_config["is_compilable"]
+        is_need_compile = __lang_config["is_need_compile"]
         source_file_full_name = config["source_code_path"]
-        exec_file_full_name = config["code_path"]
-        compiler_path = config["lang_config"]["compiler_path"]
+        exec_file_full_name = config["executable_code_path"]
+        file_full_name = config["code_path"]
 
-        args = __lang_config["args_format"] \
-            .replace("$source_file_full_name", source_file_full_name) \
-            .replace("$exec_file_full_name", exec_file_full_name)
+        if is_compilable and is_need_compile:
+            compiler_args = __lang_config["compiler"]["compiler_args"] \
+                .replace("$source_file_full_name", source_file_full_name) \
+                .replace("$exec_file_full_name", exec_file_full_name) \
+                .replace("$$file_full_name", file_full_name)
+            compiler_path = __lang_config["compiler"]["path"]
 
-        if is_compilable:
-            result = self.compile_file(compiler_path, args)
+            result = self.compile_file(compiler_path, compiler_args)
+
             if result[0].returncode != 0:
                 mssg = "Compilation error"
                 self.get_result(code_return=str(result[0].returncode), message_out=mssg, time_usage=str(result[1]),
                                 memory_usage=str(result[1]))
                 return result
 
+
         test_input = self.__tests['input']
         required_output = self.__tests['output']
 
-        what_to_run = os.path.join('.', exec_file_full_name) if is_compilable else ' '.join([compiler_path, args])
-        result = self.run_code(what_to_run=what_to_run, test_input_arr=test_input, required_output=required_output)
+        run_command = __lang_config["run_command"]["compiler_args"] \
+            .replace("$source_file_full_name", source_file_full_name) \
+            .replace("$exec_file_full_name", exec_file_full_name) \
+            .replace("$$file_full_name", file_full_name)
+
+        result = self.run_code(what_to_run=run_command, test_input_arr=test_input, required_output=required_output)
         self.get_result(code_return=str(result[0].returncode), message_out=result[1], time_usage=str(result[2]),
                         memory_usage=str(result[3]))
         return result[1]

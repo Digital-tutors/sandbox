@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env student-python
 import pika
 import traceback
 import sys
@@ -29,7 +29,7 @@ channel.queue_bind(exchange=queue_exchange,
 
 
 def callback(ch, method, props, body):
-    body = json.loads(body.decode("utf-8"))
+    body = json.loads(body.decode("utf-8"), strict=False)
     solution_id = body["id"]
     task_id = body["taskId"]
     user_id = body["userId"]

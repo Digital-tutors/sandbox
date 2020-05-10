@@ -14,16 +14,18 @@ def parse_config(file_name: str, lang: str) -> dict:
         config = json.load(f)
     lang_config = config["lang_configs"]
 
-    extension = lang_config[lang]["extension"]
-
+    source_extension = lang_config[lang]["source_extension"]
     code_path = config["code_path"] + file_name + "/" + file_name
-    source_code_path = code_path + extension
-    compiler_path = lang_config[lang]["compiler_path"]
-
+    source_code_path = code_path + source_extension
+    if lang_config[lang]["is_need_compile"]:
+        executable_extension = lang_config[lang]["compiler"]["executable_extension"]
+        executable_code_path = code_path + executable_extension
+    else:
+        executable_code_path = ""
     result = {
         "code_path": code_path,
         "source_code_path": source_code_path,
-        "compiler_path": compiler_path,
+        "executable_code_path": executable_code_path,
         "lang_config": config["lang_configs"][lang]
     }
     return result
