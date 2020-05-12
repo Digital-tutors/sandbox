@@ -6,26 +6,26 @@
       "name": "c",
       "source_extension": ".c",
       "is_compilable": true,
-      "is_need_compile": false,
+      "is_need_compile": true,
       "compiler": {
         "path": "/usr/bin/gcc",
         "compiler_args": "$source_file_full_name -o $file_full_name",
         "executable_extension": ".exe"
       },
-      "run_command": "./$file_full_name"
+      "run_command": "$file_full_name"
     },
     "cpp":
     {
       "name": "c++",
       "source_extension": ".cpp",
       "is_compilable": true,
-      "is_need_compile": false,
+      "is_need_compile": true,
       "compiler": {
         "path": "/usr/bin/g++",
         "compiler_args": "$source_file_full_name -o $file_full_name",
         "executable_extension": ".exe"
       },
-      "run_command": "./$file_full_name"
+      "run_command": "$file_full_name"
     },
     "c#": 
     {
@@ -63,7 +63,7 @@
         "compiler_args": "$source_file_full_name -include-runtime -d $exec_file_full_name",
         "executable_extension": ".jar"
       },
-      "run_command": "java -jar $exec_file_full_name"
+      "run_command": "/usr/bin/java -jar $exec_file_full_name"
     },
     "java": {
       "name": "java",

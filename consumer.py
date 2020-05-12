@@ -1,4 +1,6 @@
 #!/usr/bin/env student-python
+import subprocess
+
 import pika
 import traceback
 import sys
@@ -32,8 +34,8 @@ def callback(ch, method, props, body):
     print("Got message")
     body = json.loads(body.decode("utf-8"), strict=False)
     solution_id = body["id"]
-    task_id = body["taskId"]
-    user_id = body["userId"]
+    task_id = body["taskId"]["id"]
+    user_id = body["userId"]["id"]
     lang = body["language"]
     source_code = body["sourceCode"]
     is_test_creation = False

@@ -3,6 +3,4 @@ __pycache__
 .env
 checker
 sanbox/services/.env
-dockerfiles/student-python/Dockerfile
-dockerfiles
 
