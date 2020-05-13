@@ -15,7 +15,8 @@ def parse_config(file_name: str, lang: str) -> dict:
     lang_config = config["lang_configs"]
 
     source_extension = lang_config[lang]["source_extension"]
-    code_path = config["code_path"] + file_name + "/" + file_name
+    directory_path = config["code_path"] + file_name
+    code_path = directory_path + "/" + file_name
     source_code_path = code_path + source_extension
     if lang_config[lang]["is_need_compile"]:
         executable_extension = lang_config[lang]["compiler"]["executable_extension"]
@@ -23,6 +24,7 @@ def parse_config(file_name: str, lang: str) -> dict:
     else:
         executable_code_path = ""
     result = {
+        "directory_path": directory_path,
         "code_path": code_path,
         "source_code_path": source_code_path,
         "executable_code_path": executable_code_path,

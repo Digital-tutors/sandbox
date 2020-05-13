@@ -1,4 +1,4 @@
-FROM alpine:3.5
+FROM alpine:3.11
 # grab su-exec for easy step-down from root
 RUN apk add --no-cache 'su-exec>=0.2'
 RUN echo "http://dl-4.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
@@ -8,7 +8,12 @@ RUN echo "http://dl-4.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositor
     #Python 3
         python3 \
 	    py2-pip \
-	    python3-dev
+	    python3-dev \
+	#Mono for C# support
+	    mono --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing && \
+        apk add --no-cache --virtual=.build-dependencies ca-certificates && \
+        cert-sync /etc/ssl/certs/ca-certificates.crt && \
+        apk del .build-dependencies
 # Sandbox workdir
 RUN pip install --no-cache --upgrade pip
 WORKDIR /sandbox

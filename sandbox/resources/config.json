@@ -27,18 +27,18 @@
       },
       "run_command": "$file_full_name"
     },
-    "c#": 
+    "csharp":
     {
       "name": "c#",
-      "source_extension": ".cs",
+      "source_extension": "mono",
       "is_compilable": true,
       "is_need_compile": true,
       "compiler": {
-        "path": "",
-        "compiler_args": "$source_file_full_name",
+        "path": "mcs",
+        "compiler_args": "-out:$exec_file_full_name $source_file_full_name",
         "executable_extension": ".exe"
       },
-      "run_command": ""
+      "run_command": "mono $exec_file_full_name"
     },
     "python":
     {

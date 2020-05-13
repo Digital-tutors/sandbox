@@ -4,6 +4,7 @@ from services.ResourceMonitor import ResourceMonitor
 from concurrent.futures import ThreadPoolExecutor
 from controllers.TaskController import TaskController
 from services.sender import Sender
+import os
 
 
 class Checker:
@@ -16,7 +17,9 @@ class Checker:
         self.__corr_id = corr_id
         self.__solution_id = solution_id
         taskObj = TaskController()
-        self.task = taskObj.get_task_by_url("http://host.docker.internal:8080/task/{taskId}/admin/".format(taskId=self.__task_id))
+        # self.task = taskObj.get_task_by_url(
+        #     "http://host.docker.internal:8080/task/{taskId}/admin/".format(taskId=self.__task_id))
+        self.task = taskObj.get_task_by_url("http://172.17.0.1:3000/")
         self.__tests = self.task.tests
         self.__time_limit = int(self.task.options["timeLimit"])
         self.__memory_limit = int(self.task.options["memoryLimit"])
@@ -24,8 +27,10 @@ class Checker:
 
     def get_result(self, code_return: str = None, message_out: str = None, time_usage: str = "",
                    memory_usage: str = "", is_completed: bool = False):
-        sender = Sender(task_id=self.__task_id, corr_id=self.__corr_id, solution_id=self.__solution_id, user_id=self.__user_id, code_return=code_return,
-                        message_out=message_out, time_usage=time_usage, memory_usage=memory_usage, is_completed=is_completed)
+        sender = Sender(task_id=self.__task_id, corr_id=self.__corr_id, solution_id=self.__solution_id,
+                        user_id=self.__user_id, code_return=code_return,
+                        message_out=message_out, time_usage=time_usage, memory_usage=memory_usage,
+                        is_completed=is_completed)
         sender.send_students_result()
 
     def test_code(self) -> str:
@@ -53,10 +58,10 @@ class Checker:
 
             if str(process_object.returncode) != "0":
                 mssg = "Compilation error"
-                self.get_result(code_return=str(process_object.returncode), message_out=mssg, time_usage=str(time_usage),
+                self.get_result(code_return=str(process_object.returncode), message_out=mssg,
+                                time_usage=str(time_usage),
                                 memory_usage=str(memory_usage), is_completed=False)
                 return result
-
 
         test_input = self.__tests['input']
         required_output = self.__tests['output']
@@ -92,11 +97,11 @@ class Checker:
                     max_mem_usage = mem_thread.result()
                     max_time_usage = time_thread.result()
                     if str(result.returncode) != "0":
-                        mssg = "Runtime error, test #{}".format(str(i+1))
+                        mssg = "Runtime error, test #{}".format(str(i + 1))
                         is_completed = False
                         break
                     elif result.stdout != required_output[i]:
-                        mssg = "Wrong answer, test #{}".format(str(i+1))
+                        mssg = "Wrong answer, test #{}".format(str(i + 1))
                         is_completed = False
                         break
                     else:
@@ -120,11 +125,15 @@ class Checker:
                     is_completed = False
                 else:
                     mssg = "Correct answer"
+        time_mem_message = self.get_time_and_memory_message(time_usage=max_time_usage, mem_usage=max_mem_usage)
+
+        if time_mem_message != "":
+            mssg = time_mem_message
 
         result_obj = {
             "completed_process_object": result,
-            "memory_usage": max_mem_usage,
-            "time_usage": max_time_usage,
+            "memory_usage": max_mem_usage["usage"],
+            "time_usage": max_time_usage["usage"],
             "is_completed": is_completed,
             "message": mssg
         }
@@ -132,11 +141,13 @@ class Checker:
         return result_obj
 
     def __run_and_check(self, what_to_run: str, test_input: str = None, monitor: ResourceMonitor = None):
+        run_process = None
         if test_input is not None:
             input_test_string = test_input
         else:
             input_test_string = None
-        completed_run = subprocess.run(
+        try:
+            run_process = subprocess.run(
                 what_to_run,
                 input=input_test_string,
                 shell=True,
@@ -145,9 +156,15 @@ class Checker:
                 universal_newlines=True,
                 timeout=self.__time_limit,
                 preexec_fn=monitor.set_memory_limit)
-        if completed_run.stderr == subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as e:
             monitor.keep_measuring = False
-        return completed_run
+            run_process = run_process
+            pass
+        except MemoryError as e:
+            monitor.keep_measuring = False
+            run_process = run_process
+            pass
+        return run_process
 
     def compile_file(self, compiler_path, args):
         with ThreadPoolExecutor() as executor:
@@ -160,10 +177,13 @@ class Checker:
             mem_usage = mem_thread.result()
             time_usage = time_thread.result()
 
+            time_mem_message = self.get_time_and_memory_message(time_usage=time_usage, mem_usage=mem_usage)
+
             result = {
                 "completed_process_object": result,
-                "memory_usage": mem_usage,
-                "time_usage": time_usage
+                "memory_usage": mem_usage["usage"],
+                "time_usage": time_usage["usage"],
+                "time_mem_message": time_mem_message
             }
 
             return result
@@ -171,6 +191,8 @@ class Checker:
     # Function that compile source code.
     # Return result of compilation
     def compile(self, compiler_path: str, path_args: str, monitor: ResourceMonitor):
+        compilation = None
+        try:
             compilation = subprocess.run(' '.join([compiler_path, path_args]),
                                          shell=True,
                                          stdout=subprocess.PIPE,
@@ -178,6 +200,27 @@ class Checker:
                                          universal_newlines=True,
                                          timeout=self.__time_limit,
                                          preexec_fn=monitor.set_memory_limit)
-            if compilation.stderr == subprocess.TimeoutExpired:
-                monitor.keep_measuring = False
-            return compilation
+        except subprocess.TimeoutExpired as e:
+            monitor.keep_measuring = False
+            compilation = compilation
+            pass
+        except MemoryError as e:
+            monitor.keep_measuring = False
+            compilation = compilation
+            pass
+        return compilation
+
+    def get_time_and_memory_message(sel, time_usage, mem_usage):
+        if time_usage["message"] != "" or mem_usage["message"] != "":
+            if time_usage["message"] != "" and mem_usage["message"] != "":
+                message = "Some errors occurred"
+            elif mem_usage["message"] != "":
+                message = mem_usage["message"]
+            elif time_usage["message"] != "":
+                message = time_usage["message"]
+        else:
+            message = ""
+
+        return message
+
+

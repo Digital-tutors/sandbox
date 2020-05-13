@@ -12,6 +12,9 @@ from autochecker_io import delete_file
 from DockerSandbox import DockerSandbox
 from dotenv import load_dotenv
 import uuid
+import datetime
+import logging
+import logger
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path)
@@ -33,6 +36,7 @@ channel.queue_bind(exchange=queue_exchange,
 def callback(ch, method, props, body):
     print("Got message")
     body = json.loads(body.decode("utf-8"), strict=False)
+    print("taskId is " + str(body["taskId"]["id"]) + "\nTime is: " + str(datetime.datetime.now()))
     solution_id = body["id"]
     task_id = body["taskId"]["id"]
     user_id = body["userId"]["id"]

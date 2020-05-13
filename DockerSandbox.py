@@ -8,7 +8,8 @@ IMAGES = {
     "c": "autochecker-clang",
     "python": "autochecker-student-python",
     "java": "autochecker-openjdk11-java",
-    "kotlin": "autochecker-kotlin"
+    "kotlin": "autochecker-kotlin",
+    "csharp": "autochecker-csharp"
 }
 
 
