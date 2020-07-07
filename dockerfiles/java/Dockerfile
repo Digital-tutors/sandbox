@@ -14,7 +14,7 @@ RUN apk add --no-cache --update\
 RUN pip install --no-cache --upgrade pip
 WORKDIR /sandbox
 # Translators configs
-COPY /sandbox /sandbox
+COPY /sandbox1 /sandbox
 RUN python3 -m pip install  --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --trusted-host pypi.org  -r /sandbox/resources/requirements.txt
 RUN	chmod +x /sandbox/run.py
 ENV COMPILER="not"
