@@ -1,0 +1,81 @@
+{
+  "code_path": "/sandbox/target/",
+  "lang_configs": {
+    "c":
+    {
+      "name": "c",
+      "source_extension": ".c",
+      "is_compilable": true,
+      "is_need_compile": true,
+      "compiler": {
+        "path": "/usr/bin/gcc",
+        "compiler_args": "$source_file_full_name -o $file_full_name",
+        "executable_extension": ".exe"
+      },
+      "run_command": "$file_full_name"
+    },
+    "cpp":
+    {
+      "name": "c++",
+      "source_extension": ".cpp",
+      "is_compilable": true,
+      "is_need_compile": true,
+      "compiler": {
+        "path": "/usr/bin/g++",
+        "compiler_args": "$source_file_full_name -o $file_full_name",
+        "executable_extension": ".exe"
+      },
+      "run_command": "$file_full_name"
+    },
+    "csharp":
+    {
+      "name": "c#",
+      "source_extension": "mono",
+      "is_compilable": true,
+      "is_need_compile": true,
+      "compiler": {
+        "path": "mcs",
+        "compiler_args": "-out:$exec_file_full_name $source_file_full_name",
+        "executable_extension": ".exe"
+      },
+      "run_command": "mono $exec_file_full_name"
+    },
+    "python":
+    {
+      "name": "python3",
+      "source_extension": ".py",
+      "is_compilable": false,
+      "is_need_compile": false,
+      "compiler": {
+        "path": "",
+        "compiler_args": "",
+        "executable_extension": ""
+      },
+      "run_command": "/usr/bin/python3 $source_file_full_name"
+    },
+    "kotlin": {
+      "name": "kotlin",
+      "source_extension": ".kt",
+      "is_compilable": true,
+      "is_need_compile": true,
+      "compiler": {
+        "path": "kotlinc",
+        "compiler_args": "$source_file_full_name -include-runtime -d $exec_file_full_name",
+        "executable_extension": ".jar"
+      },
+      "run_command": "/usr/bin/java -jar $exec_file_full_name"
+    },
+    "java": {
+      "name": "java",
+      "source_extension": ".java",
+      "is_compilable": true,
+      "is_need_compile": false,
+      "compiler": {
+        "path": "javac",
+        "compiler_args": "$source_file_full_name",
+        "executable_extension": ".jar"
+      },
+      "run_command": "java $source_file_full_name"
+    }
+  }
+}
