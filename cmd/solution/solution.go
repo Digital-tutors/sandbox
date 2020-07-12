@@ -1,4 +1,4 @@
-package rabbit
+package solution
 
 import (
 	"../config"
@@ -70,7 +70,7 @@ type Result struct {
 	Memory string `json:"memory"`
 }
 
-func fromByteArrayToSolutionStruct(message []byte) *Solution {
+func FromByteArrayToSolutionStruct(message []byte) *Solution {
 	var solution Solution
 
 	json.Unmarshal(message, &solution)
@@ -85,10 +85,10 @@ func ResultToJson(result *Result) []byte {
 }
 
 
-func GetTaskUsingGet(solution *Solution) *Task {
+func GetTaskUsingGet(taskID string) *Task {
 	var task *Task
 
-	resp, err := http.Get(fmt.Sprintf("http://172.17.0.1:3000/task/%v/admin/", solution.TaskID))
+	resp, err := http.Get(fmt.Sprintf("http://172.17.0.1:3000/task/%v/admin/", taskID))
 
 	if err != nil {
 		panic(err)
@@ -106,9 +106,9 @@ func GetTaskUsingGet(solution *Solution) *Task {
 	return task
 }
 
-func updateSolutionInstance(solution *Solution, conf *config.Config) {
+func UpdateSolutionInstance(solution *Solution, conf *config.Config) {
 
-	task := GetTaskUsingGet(solution)
+	task := GetTaskUsingGet(solution.TaskID)
 
 	solution.MemoryLimit = task.Options.MemoryLimit
 	solution.TimeLimit = task.Options.TimeLimit
@@ -116,7 +116,7 @@ func updateSolutionInstance(solution *Solution, conf *config.Config) {
 	solution.DirectoryPath = conf.DockerSandbox.SourceFilePath + solution.FileName + "/"
 }
 
-func saveSolutionInFile(solution *Solution, conf *config.Config) {
+func SaveSolutionInFile(solution *Solution, conf *config.Config) {
 	extension := getExtension(conf.CompilerConfiguration.ConfigurationFilePath, solution.Language)
 
 	if _, err := os.Stat(solution.DirectoryPath); os.IsNotExist(err) {

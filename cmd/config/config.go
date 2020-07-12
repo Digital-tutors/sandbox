@@ -9,6 +9,7 @@ type RabbitMQConfig struct {
 	ResultQueueName   string
 	QueueExchangeName string
 	AMQPSScheme       string
+	RabbitMQContainerName string
 }
 
 type DockerSandboxConfig struct {
@@ -16,11 +17,20 @@ type DockerSandboxConfig struct {
 	Ports      		map[string]int
 	Images      	map[string]string
 	NetworkID 		string
-	TargetFilePath 	string
-	SourceFilePath 	string
+	TargetFileStoragePath 	string
+	SourceFileStoragePath 	string
 }
 
 type CompilerConfig struct {
+	ConfigurationFilePath string
+}
+
+type SolutionConfig struct {
+	Language string
+	FileName string
+	TaskID string
+	UserID string
+	SolutionID string
 	ConfigurationFilePath string
 }
 
@@ -28,10 +38,10 @@ type Config struct {
 	RabbitMQ RabbitMQConfig
 	DockerSandbox DockerSandboxConfig
 	CompilerConfiguration CompilerConfig
+	Solution SolutionConfig
 }
 
 func New() *Config {
-
 
 	return &Config{
 		RabbitMQ: RabbitMQConfig {
@@ -39,6 +49,7 @@ func New() *Config {
 			ResultQueueName:   getEnv("RESULT_QUEUE", "program.result"),
 			QueueExchangeName: getEnv("QUEUE_EXCHANGE", "program"),
 			AMQPSScheme:       getEnv("AMQPS_SCHEME", "rabbit://guest:guest@localhost:5672/"),
+			RabbitMQContainerName: getEnv("RABBIT_CONTAINER_NAME", "localhost"),
 		},
 
 		DockerSandbox: DockerSandboxConfig {
@@ -51,13 +62,23 @@ func New() *Config {
 			Images: map[string] string {
 				"cpp": "autochecker-cpp",
 			},
-			TargetFilePath: getEnv("TARGET_FILE_PATH", ""),
-			SourceFilePath: getEnv("CODE_STORAGE_PATH", ""),
+			TargetFileStoragePath: getEnv("TARGET_FILE_STORAGE_PATH", ""),
+			SourceFileStoragePath: getEnv("CODE_STORAGE_PATH", ""),
 		},
 
 		CompilerConfiguration: CompilerConfig {
 			ConfigurationFilePath: getEnv("LANG_CONFIG_FILE_PATH", "languageConfig.json"),
 		},
+
+		Solution: SolutionConfig{
+			Language: getEnv("LANGUAGE", ""),
+			FileName: getEnv("FILE_NAME", ""),
+			TaskID: getEnv("TASK_ID", ""),
+			UserID: getEnv("USER_ID", ""),
+			SolutionID: getEnv("SOLUTION_ID", ""),
+			ConfigurationFilePath: getEnv("SANDBOX_LANG_CONFIG_FILE_PATH", "languageConfig.json"),
+		},
+
 	}
 }
 

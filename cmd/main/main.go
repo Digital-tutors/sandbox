@@ -1,8 +1,8 @@
 package main
 
 import (
-	"./config"
-	"./dockerSandbox"
+	"../config"
+	"../dockerSandbox"
 	"github.com/joho/godotenv"
 	"log"
 )

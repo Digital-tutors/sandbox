@@ -2,11 +2,12 @@ package rabbit
 
 import (
 	"../config"
+	"../solution"
 	"github.com/streadway/amqp"
 	"log"
 )
 
-type RunContainer func(solution *Solution, conf *config.Config) string
+type RunContainer func(userSolution *solution.Solution, conf *config.Config) string
 
 func failOnError(err error, msg string) {
 	if err != nil {
@@ -76,11 +77,11 @@ func ReceiveSolution(configuration *config.Config, Run RunContainer) {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
 
-			solution := fromByteArrayToSolutionStruct(d.Body)
-			updateSolutionInstance(solution, configuration)
-			saveSolutionInFile(solution, configuration)
+			userSolution := solution.FromByteArrayToSolutionStruct(d.Body)
+			solution.UpdateSolutionInstance(userSolution, configuration)
+			solution.SaveSolutionInFile(userSolution, configuration)
 
-			Run(solution, configuration)
+			Run(userSolution, configuration)
 
 			d.Ack(false)
 		}

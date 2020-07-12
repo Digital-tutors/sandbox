@@ -3,7 +3,9 @@ package dockerSandbox
 import (
 	"../config"
 	"../rabbit"
+	"../solution"
 	"context"
+	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -27,23 +29,33 @@ func getDockerClient() *client.Client {
 	return cli
 }
 
-func getContainerConfiguration(conf *config.Config, solution *rabbit.Solution) (container.Config, container.HostConfig) {
+func getContainerConfiguration(conf *config.Config, userSolution *solution.Solution) (container.Config, container.HostConfig) {
+
+	//used to declare environment variables
+	language := fmt.Sprintf("LANGUAGE=%v", userSolution.Language)
+	fileName := fmt.Sprintf("FILE_NAME=%v", userSolution.FileName)
+	taskID := fmt.Sprintf("TASK_ID=%v", userSolution.TaskID)
+	userID := fmt.Sprintf("USER_ID=%v", userSolution.UserID)
+	solutionID := fmt.Sprintf("SOLUTION_ID=%v", userSolution.SolutionID)
+	languageConfigs := fmt.Sprintf("SANDBOX_LANG_CONFIG_FILE_PATH=%v", conf.Solution.ConfigurationFilePath)
+	resultQueue := fmt.Sprintf("RESULT_QUEUE=amqp://guest:guest@%v:5672/", conf.RabbitMQ.ResultQueueName)
+
 
 	containerConfig := container.Config{
-		Image: conf.DockerSandbox.Images[solution.Language],
-		Env:   []string {solution.TaskID, solution.UserID, solution.SolutionID, solution.Language, solution.SourceCode, solution.FileName},
+		Image: conf.DockerSandbox.Images[userSolution.Language],
+		Env:   []string {language, fileName, taskID, userID, solutionID, resultQueue, languageConfigs},
 	}
 
 	hostConfig := container.HostConfig{
 		Mounts: []mount.Mount{
 			mount.Mount{
 				Type:   mount.TypeBind,
-				Source: conf.DockerSandbox.SourceFilePath,
-				Target: conf.DockerSandbox.TargetFilePath + solution.FileName,
+				Source: conf.DockerSandbox.SourceFileStoragePath,
+				Target: conf.DockerSandbox.TargetFileStoragePath + userSolution.FileName,
 			},
 		},
 		Resources: container.Resources{
-			Memory: int64(solution.MemoryLimit * 1e+6),
+			Memory: int64(userSolution.MemoryLimit * 1e+6),
 			CpusetCpus: "0",
 		},
 		AutoRemove: true,
@@ -53,7 +65,7 @@ func getContainerConfiguration(conf *config.Config, solution *rabbit.Solution) (
 	return containerConfig, hostConfig
 }
 
-func createContainer(cli *client.Client, context context.Context, solution *rabbit.Solution, conf *config.Config) container.ContainerCreateCreatedBody {
+func createContainer(cli *client.Client, context context.Context, solution *solution.Solution, conf *config.Config) container.ContainerCreateCreatedBody {
 
 	containerConfig, hostConfig := getContainerConfiguration(conf, solution)
 
@@ -81,13 +93,13 @@ func createContainer(cli *client.Client, context context.Context, solution *rabb
 	return container
 }
 
-func Run(solution *rabbit.Solution, conf *config.Config) string {
+func Run(userSolution *solution.Solution, conf *config.Config) string {
 	cli := getDockerClient()
 	ctx := context.Background()
-	limitedContext, cancel := context.WithTimeout(context.Background(), time.Duration(solution.TimeLimit))
+	limitedContext, cancel := context.WithTimeout(context.Background(), time.Second * time.Duration(userSolution.TimeLimit))
 	defer cancel()
 
-	sandboxContainer := createContainer(cli, ctx, solution, conf)
+	sandboxContainer := createContainer(cli, ctx, userSolution, conf)
 
 	if err := cli.ContainerStart(ctx, sandboxContainer.ID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
@@ -108,13 +120,14 @@ func Run(solution *rabbit.Solution, conf *config.Config) string {
 		log.Println("Status: ", output.StatusCode)
 	}
 
+
 	switch statusCode {
 	case -1:
 		log.Println("Timed out")
 		stopTimeout := time.Second * 5 // 5 second is timeout for stopping the container
 		err := cli.ContainerStop(ctx, sandboxContainer.ID, &stopTimeout)
-		result := rabbit.NewResult(solution, false, -1, "Timeout Expired", ">"+string(solution.TimeLimit), "-")
-		rabbit.PublishResult(rabbit.ResultToJson(result), conf)
+		result := solution.NewResult(userSolution, false, -1, "Timeout Expired", ">"+string(userSolution.TimeLimit), "-")
+		rabbit.PublishResult(solution.ResultToJson(result), conf)
 
 		if err != nil {
 			log.Println("Container not stopped")
@@ -122,8 +135,8 @@ func Run(solution *rabbit.Solution, conf *config.Config) string {
 		break
 
 	case 139:
-		result := rabbit.NewResult(solution, false, -1, "Memory Expired", "-", ">"+string(solution.MemoryLimit))
-		rabbit.PublishResult(rabbit.ResultToJson(result), conf)
+		result := solution.NewResult(userSolution, false, -1, "Memory Expired", "-", ">"+string(userSolution.MemoryLimit))
+		rabbit.PublishResult(solution.ResultToJson(result), conf)
 		break
 	}
 
