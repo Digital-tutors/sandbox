@@ -82,6 +82,7 @@ func ReceiveSolution(configuration *config.Config, Run RunContainer) {
 			solution.SaveSolutionInFile(userSolution, configuration)
 
 			Run(userSolution, configuration)
+			solution.DeleteSolution(configuration.DockerSandbox.SourceFileStoragePath + userSolution.FileName)
 
 			d.Ack(false)
 		}

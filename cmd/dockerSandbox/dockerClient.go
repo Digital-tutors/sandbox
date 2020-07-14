@@ -34,16 +34,17 @@ func getContainerConfiguration(conf *config.Config, userSolution *solution.Solut
 	//used to declare environment variables
 	language := fmt.Sprintf("LANGUAGE=%v", userSolution.Language)
 	fileName := fmt.Sprintf("FILE_NAME=%v", userSolution.FileName)
-	taskID := fmt.Sprintf("TASK_ID=%v", userSolution.TaskID)
-	userID := fmt.Sprintf("USER_ID=%v", userSolution.UserID)
+	taskID := fmt.Sprintf("TASK_ID=%v", userSolution.TaskID.ID)
+	userID := fmt.Sprintf("USER_ID=%v", userSolution.UserID.ID)
 	solutionID := fmt.Sprintf("SOLUTION_ID=%v", userSolution.SolutionID)
 	languageConfigs := fmt.Sprintf("SANDBOX_LANG_CONFIG_FILE_PATH=%v", conf.Solution.ConfigurationFilePath)
-	resultQueue := fmt.Sprintf("RESULT_QUEUE=amqp://guest:guest@%v:5672/", conf.RabbitMQ.ResultQueueName)
-
+	resultQueue := fmt.Sprintf("RESULT_QUEUE=amqp://guest:guest@%v:8088/", conf.RabbitMQ.ResultQueueName)
+	isStarted := "IS_CONTAINER_STARTED=true"
+	dockerTaskStorageUrl := fmt.Sprintf("DOCKER_URL_OF_TASK_STORAGE=%v", conf.DockerSandbox.DockerUrlOfTaskStorage)
 
 	containerConfig := container.Config{
 		Image: conf.DockerSandbox.Images[userSolution.Language],
-		Env:   []string {language, fileName, taskID, userID, solutionID, resultQueue, languageConfigs},
+		Env:   []string {language, fileName, taskID, userID, solutionID, resultQueue, languageConfigs, isStarted, dockerTaskStorageUrl},
 	}
 
 	hostConfig := container.HostConfig{
@@ -121,11 +122,13 @@ func Run(userSolution *solution.Solution, conf *config.Config) string {
 	}
 
 
+
 	switch statusCode {
 	case -1:
 		log.Println("Timed out")
 		stopTimeout := time.Second * 5 // 5 second is timeout for stopping the container
 		err := cli.ContainerStop(ctx, sandboxContainer.ID, &stopTimeout)
+		conf.DockerSandbox.IsStarted = false
 		result := solution.NewResult(userSolution, false, -1, "Timeout Expired", ">"+string(userSolution.TimeLimit), "-")
 		rabbit.PublishResult(solution.ResultToJson(result), conf)
 
@@ -135,6 +138,7 @@ func Run(userSolution *solution.Solution, conf *config.Config) string {
 		break
 
 	case 139:
+		conf.DockerSandbox.IsStarted = false
 		result := solution.NewResult(userSolution, false, -1, "Memory Expired", "-", ">"+string(userSolution.MemoryLimit))
 		rabbit.PublishResult(solution.ResultToJson(result), conf)
 		break

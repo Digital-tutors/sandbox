@@ -19,6 +19,9 @@ type DockerSandboxConfig struct {
 	NetworkID 		string
 	TargetFileStoragePath 	string
 	SourceFileStoragePath 	string
+	IsStarted bool
+	TaskStorageUrl string
+	DockerUrlOfTaskStorage string
 }
 
 type CompilerConfig struct {
@@ -43,16 +46,27 @@ type Config struct {
 
 func New() *Config {
 
+	isStarted := getEnv("IS_CONTAINER_STARTED", "false")
+
+	var isContainerStarted bool = false
+
+	if isStarted == "true" {
+		isContainerStarted = true
+	} else {
+		isContainerStarted = false
+	}
+
 	return &Config{
 		RabbitMQ: RabbitMQConfig {
 			TaskQueueName:     getEnv("TASK_QUEUE", "program.tasks"),
 			ResultQueueName:   getEnv("RESULT_QUEUE", "program.result"),
 			QueueExchangeName: getEnv("QUEUE_EXCHANGE", "program"),
 			AMQPSScheme:       getEnv("AMQPS_SCHEME", "rabbit://guest:guest@localhost:5672/"),
-			RabbitMQContainerName: getEnv("RABBIT_CONTAINER_NAME", "localhost"),
+			RabbitMQContainerName: getEnv("RABBIT_HOST_NAME", "localhost"),
 		},
 
 		DockerSandbox: DockerSandboxConfig {
+			IsStarted: isContainerStarted,
 			NetworkName: getEnv("DOCKER_NETWORK", ""),
 			NetworkID: getEnv("DOCKER_NETWORK_ID", ""),
 			Ports: map[string] int{
@@ -64,6 +78,8 @@ func New() *Config {
 			},
 			TargetFileStoragePath: getEnv("TARGET_FILE_STORAGE_PATH", ""),
 			SourceFileStoragePath: getEnv("CODE_STORAGE_PATH", ""),
+			TaskStorageUrl: getEnv("TASK_STORAGE_URL", ""),
+			DockerUrlOfTaskStorage: getEnv("DOCKER_URL_OF_TASK_STORAGE", ""),
 		},
 
 		CompilerConfiguration: CompilerConfig {

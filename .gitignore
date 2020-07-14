@@ -1,6 +1,7 @@
 .idea
 __pycache__
-.env
+cmd/.env
 checker
-sanbox/services/.env
-
+*.env
+backup.txt
+*.exe

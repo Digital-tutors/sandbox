@@ -3,19 +3,28 @@ package solution
 import (
 	"../config"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
+
+type TaskID struct {
+	ID string `json:"id"`
+}
+
+type UserID struct {
+	ID string `json:"id"`
+}
+
 
 type Solution struct {
 	SourceCode string `json:"sourceCode"`
 	Language string `json:"language"`
-	TaskID string `json:"taskId"`
+	TaskID TaskID `json:"taskId"`
 	SolutionID string `json:"id"`
-	UserID string `json:"userId"`
+	UserID UserID `json:"userId"`
 	FileName string
 	DirectoryPath string
 	TimeLimit int
@@ -23,7 +32,7 @@ type Solution struct {
 }
 
 type Task struct {
-	TaskID string `json:"taskId"`
+	TaskID string `json:"id"`
 	Options Options `json:"options"`
 	Tests Tests `json:"tests"`
 }
@@ -85,10 +94,11 @@ func ResultToJson(result *Result) []byte {
 }
 
 
-func GetTaskUsingGet(taskID string) *Task {
+func GetTaskUsingGet(url string, taskID string) *Task {
 	var task *Task
 
-	resp, err := http.Get(fmt.Sprintf("http://172.17.0.1:3000/task/%v/admin/", taskID))
+	newUrl := strings.Replace(url, "$taskID", taskID, -1)
+	resp, err := http.Get(newUrl)
 
 	if err != nil {
 		panic(err)
@@ -108,12 +118,20 @@ func GetTaskUsingGet(taskID string) *Task {
 
 func UpdateSolutionInstance(solution *Solution, conf *config.Config) {
 
-	task := GetTaskUsingGet(solution.TaskID)
+	var taskUrl string
+
+	if conf.DockerSandbox.IsStarted {
+		taskUrl = conf.DockerSandbox.DockerUrlOfTaskStorage
+	} else {
+		taskUrl = conf.DockerSandbox.TaskStorageUrl
+	}
+
+	task := GetTaskUsingGet(taskUrl, solution.TaskID.ID)
 
 	solution.MemoryLimit = task.Options.MemoryLimit
 	solution.TimeLimit = task.Options.TimeLimit
 	solution.FileName = solution.SolutionID
-	solution.DirectoryPath = conf.DockerSandbox.SourceFilePath + solution.FileName + "/"
+	solution.DirectoryPath = conf.DockerSandbox.SourceFileStoragePath + solution.FileName + "/"
 }
 
 func SaveSolutionInFile(solution *Solution, conf *config.Config) {
@@ -165,8 +183,8 @@ func DeleteSolution(directoryPath string) {
 func NewResult(solution *Solution, completed bool, codeReturn int, messageOut string, runtime string, memory string) *Result {
 	return &Result{
 		ID: solution.SolutionID,
-		TaskID: solution.TaskID,
-		UserID: solution.UserID,
+		TaskID: solution.TaskID.ID,
+		UserID: solution.UserID.ID,
 		Completed: completed,
 		CodeReturn: codeReturn,
 		MessageOut: messageOut,
