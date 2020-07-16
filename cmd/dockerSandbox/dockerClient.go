@@ -12,6 +12,8 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"log"
+	"os"
+	"strconv"
 	"time"
 )
 
@@ -44,6 +46,7 @@ func getContainerConfiguration(conf *config.Config, userSolution *solution.Solut
 
 	containerConfig := container.Config{
 		Image: conf.DockerSandbox.Images[userSolution.Language],
+		User:  strconv.Itoa(os.Getuid()),
 		Env:   []string {language, fileName, taskID, userID, solutionID, resultQueue, languageConfigs, isStarted, dockerTaskStorageUrl},
 	}
 
@@ -95,12 +98,15 @@ func createContainer(cli *client.Client, context context.Context, solution *solu
 }
 
 func Run(userSolution *solution.Solution, conf *config.Config) string {
+
 	cli := getDockerClient()
 	ctx := context.Background()
 	limitedContext, cancel := context.WithTimeout(context.Background(), time.Second * time.Duration(userSolution.TimeLimit))
 	defer cancel()
 
 	sandboxContainer := createContainer(cli, ctx, userSolution, conf)
+
+	fmt.Print(cli.DaemonHost())
 
 	if err := cli.ContainerStart(ctx, sandboxContainer.ID, types.ContainerStartOptions{}); err != nil {
 		panic(err)

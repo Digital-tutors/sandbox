@@ -98,6 +98,7 @@ func GetTaskUsingGet(url string, taskID string) *Task {
 	var task *Task
 
 	newUrl := strings.Replace(url, "$taskID", taskID, -1)
+
 	resp, err := http.Get(newUrl)
 
 	if err != nil {

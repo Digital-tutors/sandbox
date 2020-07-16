@@ -78,6 +78,7 @@ func ReceiveSolution(configuration *config.Config, Run RunContainer) {
 			log.Printf("Received a message: %s", d.Body)
 
 			userSolution := solution.FromByteArrayToSolutionStruct(d.Body)
+
 			solution.UpdateSolutionInstance(userSolution, configuration)
 			solution.SaveSolutionInFile(userSolution, configuration)
 
