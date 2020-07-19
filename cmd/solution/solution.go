@@ -3,6 +3,7 @@ package solution
 import (
 	"../config"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -102,12 +103,14 @@ func GetTaskUsingGet(url string, taskID string) *Task {
 	resp, err := http.Get(newUrl)
 
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 
@@ -138,8 +141,9 @@ func UpdateSolutionInstance(solution *Solution, conf *config.Config) {
 func SaveSolutionInFile(solution *Solution, conf *config.Config) {
 	extension := getExtension(conf.CompilerConfiguration.ConfigurationFilePath, solution.Language)
 
-	if _, err := os.Stat(solution.DirectoryPath); os.IsNotExist(err) {
-		os.Mkdir(solution.DirectoryPath, os.ModeDir)
+	if err := ensureDir(solution.DirectoryPath); err != nil {
+		fmt.Println("Directory creation failed with error: " + err.Error())
+		os.Exit(1)
 	}
 
 	file, err := os.Create(solution.DirectoryPath + solution.FileName + extension)
@@ -150,6 +154,15 @@ func SaveSolutionInFile(solution *Solution, conf *config.Config) {
 	defer file.Close()
 
 	file.WriteString(solution.SourceCode)
+}
+
+func ensureDir(dirName string) error {
+	err := os.MkdirAll(dirName, os.ModePerm)
+	if err == nil || os.IsExist(err) {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func GetConfiguration(configurationFilePath string) LanguageConfiguration {

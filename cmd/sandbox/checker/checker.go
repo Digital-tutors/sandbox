@@ -121,6 +121,8 @@ func compile(solutionConfiguration *SolutionConfiguration) *ProcessStat {
 	startTime := time.Now()
 	exitCode := 0
 
+	cmdProcessPID := os.Getpid()
+
 	if err := cmd.Run() ; err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			exitCode = exitError.ExitCode()
@@ -128,14 +130,16 @@ func compile(solutionConfiguration *SolutionConfiguration) *ProcessStat {
 	}
 	timeUsage := timeTrack(startTime)
 
-	memoryUsage, err := calculateMemory(cmd.Process.Pid)
+	log.Println(cmdProcessPID)
+	memoryUsage, err := calculateMemory(cmdProcessPID)
+	log.Print(memoryUsage)
 
 	if err != nil {
 		log.Print(err)
 	}
 
 	return &ProcessStat{
-		PID: cmd.Process.Pid,
+		PID: cmdProcessPID,
 		CodeReturn: exitCode,
 		MemoryUsage: string(memoryUsage),
 		TimeUsage:  string(timeUsage),
@@ -149,18 +153,18 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 	var maxMemoryUsage uint64
 	runCommand := getRunCommand(solutionConfiguration)
 	exitCode := -404
+	cmdProcessPID := os.Getpid()
 
 	var processStat ProcessStat
 
 	for index:= 0; index < len(task.Tests.Input); index++ {
 
-		var stdout, stderr bytes.Buffer
+		cmdProcessPID = os.Getpid()
 
 		cmd := exec.Command(runCommand)
 		cmd.Stdin = strings.NewReader(task.Tests.Input[index])
 
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
+		output, err := cmd.CombinedOutput()
 
 		startTime := time.Now()
 
@@ -176,7 +180,7 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 			maxTimeUsage = timeUsage
 		}
 
-		memory, err := calculateMemory(cmd.Process.Pid)
+		memory, err := calculateMemory(cmdProcessPID)
 		if err != nil {
 			log.Print(err)
 		}
@@ -185,11 +189,13 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 			maxMemoryUsage = memory
 		}
 
-		if stdout.String() != task.Tests.Output[index] {
-			processStat.PID = cmd.Process.Pid
+		log.Println(string(output))
+
+		if string(output) != task.Tests.Output[index] {
+			processStat.PID = cmdProcessPID
 			processStat.CodeReturn = exitCode
-			processStat.MessageOut = fmt.Sprintf("Wrong Answer. Test #%v", index)
-			processStat.TimeUsage = maxTimeUsage.String()
+			processStat.MessageOut = fmt.Sprintf("Wrong Answer. Test #%v", index + 1)
+			processStat.TimeUsage = string(maxTimeUsage)
 			processStat.MemoryUsage = string(maxMemoryUsage)
 
 			return &processStat
@@ -197,7 +203,7 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 
 	}
 
-	processStat.PID = 1
+	processStat.PID = cmdProcessPID
 	processStat.MemoryUsage = string(maxMemoryUsage)
 	processStat.TimeUsage = maxTimeUsage.String()
 	processStat.MessageOut = "Correct answer"

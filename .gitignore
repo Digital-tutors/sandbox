@@ -4,3 +4,4 @@ cmd/.env
 *.env
 backup.txt
 *.exe
+storageFolder

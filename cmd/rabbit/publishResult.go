@@ -7,7 +7,7 @@ import (
 )
 
 func PublishResult(result []byte,configuration *config.Config) {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := amqp.Dial(configuration.RabbitMQ.AMQPSScheme)
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 

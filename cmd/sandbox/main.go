@@ -5,6 +5,7 @@ import (
 	"./checker"
 )
 
+
 func main() {
 	configuration := config.New()
 	checker.TestSolution(configuration)
