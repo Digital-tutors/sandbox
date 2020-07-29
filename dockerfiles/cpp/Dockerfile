@@ -21,6 +21,7 @@ COPY /cmd/solution /sandbox/solution
 ENV GOCACHE="/tmp/.cache"
 
 RUN go get "github.com/streadway/amqp"
+RUN mkdir /sandbox/target && chmod -R 777 /sandbox/target
 CMD go run /sandbox/sandbox/main.go
 #test
 

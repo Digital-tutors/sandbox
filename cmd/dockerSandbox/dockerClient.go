@@ -6,16 +6,16 @@ import (
 	"../solution"
 	"context"
 	"fmt"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/client"
 	"io"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
 )
 
 func ReceiveSolutions(conf *config.Config) {
@@ -36,6 +36,7 @@ func Run(userSolution *solution.Solution, conf *config.Config) string {
 	resultQueue := fmt.Sprintf("RESULT_QUEUE=%v", conf.RabbitMQ.ResultQueueName)
 	isStarted := "IS_CONTAINER_STARTED=true"
 	dockerTaskStorageUrl := fmt.Sprintf("DOCKER_URL_OF_TASK_STORAGE=%v", conf.DockerSandbox.DockerUrlOfTaskStorage)
+	targetFileStoragePath := fmt.Sprintf("TARGET_FILE_STORAGE_PATH=%v", conf.DockerSandbox.TargetFileStoragePath)
 
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -43,18 +44,44 @@ func Run(userSolution *solution.Solution, conf *config.Config) string {
 		panic(err)
 	}
 
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
+
+	//volumePath := fmt.Sprintf("%v:%s",  strings.TrimSuffix(conf.DockerSandbox.SourceFileStoragePath, "/"), strings.TrimSuffix(conf.DockerSandbox.TargetFileStoragePath, "/"))
+
+	volumePath := fmt.Sprintf("%v:%s",  strings.TrimSuffix(userSolution.DirectoryPath, "/"), strings.TrimSuffix(conf.DockerSandbox.TargetFileStoragePath, "/"))
+
+	log.Print(volumePath)
+
+	//myVolume, _ := cli.VolumeCreate(ctx, volume.VolumeCreateBody{
+	//	Name: "sandbox",
+	//	Driver: "local-persist",
+	//	DriverOpts: map[string]string{
+	//		"mountpoint": strings.TrimSuffix(userSolution.DirectoryPath, "/"),
+	//	},
+	//})
+
+	resp, err := cli.ContainerCreate(ctx,
+		&container.Config{
 		Image: conf.DockerSandbox.Images[userSolution.Language],
 		User:  strconv.Itoa(os.Getuid()),
-		Env:   []string{language, fileName, taskID, userID, solutionID, resultQueue, languageConfigs, isStarted, dockerTaskStorageUrl, scheme},
+		Env:   []string{language, fileName, taskID, userID, solutionID, resultQueue, languageConfigs, isStarted, dockerTaskStorageUrl, scheme, targetFileStoragePath},
 		Tty:   true,
 	},
 		&container.HostConfig{
+			VolumeDriver: "local-persist",
 			Mounts: []mount.Mount{
 				{
 					Type:   mount.TypeBind,
-					Source: conf.DockerSandbox.SourceFileStoragePath,
-					Target: conf.DockerSandbox.TargetFileStoragePath + userSolution.FileName,
+					Source: strings.TrimSuffix(userSolution.DirectoryPath, "/"),
+					Target: strings.TrimSuffix(conf.DockerSandbox.TargetFileStoragePath + userSolution.SolutionID, "/"),
+					ReadOnly: false,
+					//VolumeOptions: &mount.VolumeOptions{
+					//	DriverConfig: &mount.Driver{
+					//		Name: "local-persist",
+					//		Options: map[string]string{
+					//			"mountpoint": strings.TrimSuffix(userSolution.DirectoryPath, "/"),
+					//		},
+					//	},
+					//},
 				},
 			},
 			Resources: container.Resources{
@@ -75,12 +102,14 @@ func Run(userSolution *solution.Solution, conf *config.Config) string {
 	//	panic(error)
 	//}
 
+	startTime := time.Now()
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
 	}
 
 
 	var statusCode int64 = -1
+	var timeUsage time.Duration
 	statusChannel, errorChannel := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNextExit)
 	select {
 	case err := <-errorChannel:
@@ -89,10 +118,12 @@ func Run(userSolution *solution.Solution, conf *config.Config) string {
 			if err != nil {
 				log.Println(err)
 			}
+			timeUsage = time.Since(startTime)
 		}
 	case output := <-statusChannel:
 		statusCode = output.StatusCode
 		log.Println("Status: ", output.StatusCode)
+		timeUsage = time.Since(startTime)
 	}
 
 	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
@@ -102,23 +133,12 @@ func Run(userSolution *solution.Solution, conf *config.Config) string {
 
 	io.Copy(os.Stdout, out)
 
+	log.Printf("Status code is %v", statusCode)
+
 	switch statusCode {
-	case -1:
-		log.Println("Timed out")
-		stopTimeout := time.Second * 5 // 5 second is timeout for stopping the container
-		err := cli.ContainerStop(ctx, resp.ID, &stopTimeout)
-		conf.DockerSandbox.IsStarted = false
-		result := solution.NewResult(userSolution, false, -1, "Timeout Expired", ">"+string(userSolution.TimeLimit), "-")
-		rabbit.PublishResult(solution.ResultToJson(result), conf)
-
-		if err != nil {
-			log.Println("Container not stopped")
-		}
-		break
-
 	case 139:
 		conf.DockerSandbox.IsStarted = false
-		result := solution.NewResult(userSolution, false, 139, "Memory Expired", "-", ">"+string(userSolution.MemoryLimit))
+		result := solution.NewResult(userSolution, false, 139, "Memory Expired", timeUsage.String(), ">"+string(userSolution.MemoryLimit))
 		rabbit.PublishResult(solution.ResultToJson(result), conf)
 		break
 	}

@@ -60,7 +60,8 @@ type LangConfigStructure struct{
 	IsCompilable bool `json:"is_compilable"`
 	IsNeedCompile bool `json:"is_need_compile"`
 	Compiler CompilerStructure `json:"compiler"`
-	RunCommand string `json:"run_command"`
+	Runner string `json:"runner"`
+	RunnerArguments string `json:"runner_args"`
 }
 
 type CompilerStructure struct {
@@ -146,7 +147,9 @@ func SaveSolutionInFile(solution *Solution, conf *config.Config) {
 		os.Exit(1)
 	}
 
-	file, err := os.Create(solution.DirectoryPath + solution.FileName + extension)
+	filePath := solution.DirectoryPath + solution.FileName + extension
+
+	file, err := os.Create(filePath)
 
 	if err != nil{
 		log.Println("Unable to create file:", err)
@@ -154,6 +157,11 @@ func SaveSolutionInFile(solution *Solution, conf *config.Config) {
 	defer file.Close()
 
 	file.WriteString(solution.SourceCode)
+
+	err = os.Chmod(filePath, 0777)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func ensureDir(dirName string) error {
@@ -183,6 +191,7 @@ func GetConfiguration(configurationFilePath string) LanguageConfiguration {
 
 func getExtension(configurationFilePath string, language string) string {
 	config := GetConfiguration(configurationFilePath)
+
 
 	return config.LangConfigs[language].SourceExtension
 }

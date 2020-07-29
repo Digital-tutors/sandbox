@@ -12,7 +12,8 @@
         "compiler_args": "$source_file_full_name -o $file_full_name",
         "executable_extension": ".exe"
       },
-      "run_command": "$file_full_name"
+      "runner": "$file_full_name",
+      "runner_args": ""
     },
     "cpp":
     {
@@ -25,7 +26,8 @@
         "compiler_args": "$source_file_full_name -o $file_full_name",
         "executable_extension": ".exe"
       },
-      "run_command": "$file_full_name"
+      "runner": "$file_full_name",
+      "runner_args": ""
     },
     "csharp":
     {
@@ -38,7 +40,8 @@
         "compiler_args": "-out:$exec_file_full_name $source_file_full_name",
         "executable_extension": ".exe"
       },
-      "run_command": "mono $exec_file_full_name"
+      "runner": "mono",
+      "runner_args": "$exec_file_full_name"
     },
     "python":
     {
@@ -51,7 +54,8 @@
         "compiler_args": "",
         "executable_extension": ""
       },
-      "run_command": "/usr/bin/python3 $source_file_full_name"
+      "runner": "/usr/bin/python3",
+      "runner_args": "$source_file_full_name"
     },
     "kotlin": {
       "name": "kotlin",
@@ -63,7 +67,8 @@
         "compiler_args": "$source_file_full_name -include-runtime -d $exec_file_full_name",
         "executable_extension": ".jar"
       },
-      "run_command": "/usr/bin/java -jar $exec_file_full_name"
+      "runner": "/usr/bin/java",
+      "runner_args": "-jar $exec_file_full_name"
     },
     "java": {
       "name": "java",
@@ -75,7 +80,8 @@
         "compiler_args": "$source_file_full_name",
         "executable_extension": ".jar"
       },
-      "run_command": "java $source_file_full_name"
+      "runner": "java",
+      "runner_args": "$source_file_full_name"
     }
   }
 }
