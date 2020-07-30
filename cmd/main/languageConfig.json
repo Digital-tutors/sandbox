@@ -13,7 +13,11 @@
         "executable_extension": ".exe"
       },
       "runner": "$file_full_name",
-      "runner_args": ""
+      "runner_args": "",
+      "comments": {
+        "single_line_comment": "//.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
     },
     "cpp":
     {
@@ -27,7 +31,11 @@
         "executable_extension": ".exe"
       },
       "runner": "$file_full_name",
-      "runner_args": ""
+      "runner_args": "",
+      "comments": {
+        "single_line_comment": "//.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
     },
     "csharp":
     {
@@ -41,7 +49,11 @@
         "executable_extension": ".exe"
       },
       "runner": "mono",
-      "runner_args": "$exec_file_full_name"
+      "runner_args": "$exec_file_full_name",
+      "comments": {
+        "single_line_comment": "//.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
     },
     "python":
     {
@@ -55,7 +67,11 @@
         "executable_extension": ""
       },
       "runner": "/usr/bin/python3",
-      "runner_args": "$source_file_full_name"
+      "runner_args": "$source_file_full_name",
+      "comments": {
+        "single_line_comment": "#.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
     },
     "kotlin": {
       "name": "kotlin",
@@ -68,7 +84,11 @@
         "executable_extension": ".jar"
       },
       "runner": "/usr/bin/java",
-      "runner_args": "-jar $exec_file_full_name"
+      "runner_args": "-jar $exec_file_full_name",
+      "comments": {
+        "single_line_comment": "//.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
     },
     "java": {
       "name": "java",
@@ -81,7 +101,11 @@
         "executable_extension": ".jar"
       },
       "runner": "java",
-      "runner_args": "$source_file_full_name"
+      "runner_args": "$source_file_full_name",
+      "comments": {
+        "single_line_comment": "//.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
     }
   }
 }

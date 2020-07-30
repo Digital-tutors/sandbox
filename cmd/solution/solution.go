@@ -62,8 +62,13 @@ type LangConfigStructure struct{
 	Compiler CompilerStructure `json:"compiler"`
 	Runner string `json:"runner"`
 	RunnerArguments string `json:"runner_args"`
+	Comments Comments `json:"comments"`
 }
 
+type Comments struct {
+	SingleLineComment string `json:"single_line_comment"`
+	MultiLineComment string `json:"multi_line_comment"`
+}
 type CompilerStructure struct {
 	Path string `json:"path"`
 	CompilerArgs string `json:"compiler_args"`

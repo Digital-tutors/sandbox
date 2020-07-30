@@ -76,6 +76,7 @@ func New() *Config {
 			Images: map[string] string {
 				"cpp": "autochecker-cpp",
 				"python": "autochecker-student-python",
+				"java": "autochecker-java",
 			},
 			TargetFileStoragePath: getEnv("TARGET_FILE_STORAGE_PATH", ""),
 			SourceFileStoragePath: getEnv("CODE_STORAGE_PATH", ""),

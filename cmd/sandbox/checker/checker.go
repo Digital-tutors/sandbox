@@ -47,7 +47,7 @@ type ProcessStat struct {
 type processInfo struct {
 	PID int
 	CodeReturn int
-	TimeUsage time.Duration
+	TimeUsage float64
 	MessageOut string
 	ErrorMessage string
 	Output []byte
@@ -187,7 +187,7 @@ func compile(task *solution.Task, solutionConfiguration *SolutionConfiguration) 
 	//	messageOut = "OK"
 	//}
 
-	processInfo := executeCommandWithArgs(string(compilerPath), "", "Compilation error", task.Options.TimeLimit, solutionConfiguration.DirectoryPath, string(compileCommandArgs))
+	processInfo := executeCommandWithArgs(string(compilerPath), "", "Compilation error", task.Options.TimeLimit, solutionConfiguration.DirectoryPath, strings.Fields(string(compileCommandArgs))...)
 
 	log.Printf("Output is %s",string(processInfo.Output))
 
@@ -202,15 +202,14 @@ func compile(task *solution.Task, solutionConfiguration *SolutionConfiguration) 
 		PID: processInfo.PID,
 		CodeReturn: processInfo.CodeReturn,
 		MemoryUsage: strconv.FormatUint(memoryUsage, 10),
-		TimeUsage:  processInfo.TimeUsage.String(),
+		TimeUsage:  fmt.Sprintf("%.6f", processInfo.TimeUsage),
 		MessageOut: processInfo.MessageOut,
 	}
 }
 
 func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguration) *ProcessStat {
 
-	var maxTimeUsage time.Duration
-	var timeUsage time.Duration
+	var maxTimeUsage float64
 	var maxMemoryUsage uint64
 	var cmdProcessPID int
 	var messageOut string
@@ -224,12 +223,12 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 	for index:= 0; index < len(task.Tests.Input); index++ {
 
 
-		precessInfo := executeCommandWithArgs(string(runnerPath), task.Tests.Input[index], "Runtime error", task.Options.TimeLimit, solutionConfiguration.DirectoryPath, string(runCommandArgs))
+		precessInfo := executeCommandWithArgs(string(runnerPath), task.Tests.Input[index], "Runtime error", task.Options.TimeLimit, solutionConfiguration.DirectoryPath, strings.Fields(string(runCommandArgs))...)
 
 		log.Printf("Output is %s",string(precessInfo.Output))
 
 		if maxTimeUsage < precessInfo.TimeUsage {
-			maxTimeUsage = timeUsage
+			maxTimeUsage = precessInfo.TimeUsage
 		}
 
 		memory, err := calculateMemory(precessInfo.PID)
@@ -244,18 +243,21 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 		log.Println(string(precessInfo.Output))
 		log.Printf("Message out is %v", messageOut)
 
+		log.Printf("Correct out is %v", task.Tests.Output[index])
+
 		if string(precessInfo.Output) != task.Tests.Output[index] {
 
 			messageOut = fmt.Sprintf("Wrong Answer. Test #%v", index + 1)
 
 			if precessInfo.ErrorMessage != "" {
 				messageOut = "Runtime error"
+				log.Printf("Error is %v", precessInfo.ErrorMessage)
 			}
 
 			processStat.PID = cmdProcessPID
 			processStat.CodeReturn = exitCode
 			processStat.MessageOut = messageOut
-			processStat.TimeUsage = string(maxTimeUsage)
+			processStat.TimeUsage = fmt.Sprintf("%.6f", maxTimeUsage)
 			processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage,10)
 
 			return &processStat
@@ -266,7 +268,7 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 
 	processStat.PID = cmdProcessPID
 	processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage,10)
-	processStat.TimeUsage = maxTimeUsage.String()
+	processStat.TimeUsage = fmt.Sprintf("%.6f", maxTimeUsage)
 	processStat.MessageOut = "Correct answer"
 	processStat.CodeReturn = 0
 
@@ -278,19 +280,15 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 func executeCommandWithArgs(runner string, input string, defaultMessageOutput string, timeLimit int, dirPath string, args ...string) processInfo {
 
 	var messageOut string
-	var timeUsage time.Duration
+	var timeUsage float64
 	exitCode := 1
 
 	var stdout, stderr []byte
 	var errStdout, errStderr error
 
+	log.Printf("Runner is %s .Argument is %v", runner, args)
 	cmd := exec.Command(runner, args...)
-	cmd.Dir = dirPath
-
-	//
-	//var stdout bytes.Buffer
-	//cmd.Stdout = &stdout
-	//cmd.Stderr = &stdout
+	//cmd.Dir = dirPath
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -323,14 +321,14 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 			defer wg.Done()
 			stdout, errStdout = copyAndCapture(os.Stdout, stdoutIn)
 		}()
-
-		stderr, errStderr = copyAndCapture(os.Stderr, stderrIn)
-		log.Printf("Error is %v", errStderr)
 		wg.Wait()
 
 	}
 
-	cmdProcessPID := cmd.Process.Pid
+	stderr, errStderr = copyAndCapture(os.Stderr, stderrIn)
+	log.Printf("Error is %v", errStderr)
+
+	cmdProcessPID := os.Getpid()
 	log.Printf("Process PID id %v\n", cmdProcessPID)
 
 	startTime := time.Now()
@@ -352,7 +350,7 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 		timeUsage = timeTrack(startTime)
 	}
 
-	output := []byte(string(stdout) + "\n" + string(stderr))
+	output := []byte(string(stdout))
 
 	return processInfo{
 		PID: cmdProcessPID,
@@ -374,10 +372,12 @@ func copyAndCapture(w io.Writer, r io.Reader) ([]byte, error) {
 			out = append(out, d...)
 			_, err := w.Write(d)
 			if err != nil {
+				log.Printf("Out is %v, error is %v", string(out), err)
 				return out, err
 			}
 		}
 		if err != nil {
+			log.Printf("error is %v", err)
 			// Read returns io.EOF at the end of file, which is not an error for us
 			if err == io.EOF {
 				err = nil
@@ -390,6 +390,7 @@ func copyAndCapture(w io.Writer, r io.Reader) ([]byte, error) {
 func calculateMemory(pid int) (uint64, error) {
 	f, err := os.Open(fmt.Sprintf("/proc/%d/smaps", pid))
 	if err != nil {
+		log.Printf("error is %v", err)
 		return 0, err
 	}
 	defer f.Close()
@@ -403,17 +404,19 @@ func calculateMemory(pid int) (uint64, error) {
 			var size uint64
 			_, err := fmt.Sscanf(string(line[4:]), "%d", &size)
 			if err != nil {
+				log.Printf("error is %v", err)
 				return 0, err
 			}
 			res += size
 		}
 	}
 	if err := r.Err(); err != nil {
+		log.Printf("error is %v", err)
 		return 0, err
 	}
 	return res, nil
 }
 
-func timeTrack(start time.Time) time.Duration {
-	return time.Since(start)
+func timeTrack(start time.Time) float64 {
+	return time.Since(start).Seconds()
 }
