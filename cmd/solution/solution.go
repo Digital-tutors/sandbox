@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -40,8 +41,8 @@ type Task struct {
 
 type Options struct {
 	Constructions []string `json:"constructions"`
-	TimeLimit int `json:"timeLimit"`
-	MemoryLimit int `json:"memoryLimit"`
+	TimeLimit string `json:"timeLimit"`
+	MemoryLimit string `json:"memoryLimit"`
 }
 
 type Tests struct {
@@ -138,8 +139,8 @@ func UpdateSolutionInstance(solution *Solution, conf *config.Config) {
 
 	task := GetTaskUsingGet(taskUrl, solution.TaskID.ID)
 
-	solution.MemoryLimit = task.Options.MemoryLimit
-	solution.TimeLimit = task.Options.TimeLimit
+	solution.MemoryLimit, _ = strconv.Atoi(task.Options.MemoryLimit)
+	solution.TimeLimit, _ = strconv.Atoi(task.Options.TimeLimit)
 	solution.FileName = solution.SolutionID
 	solution.DirectoryPath = conf.DockerSandbox.SourceFileStoragePath + solution.FileName + "/"
 }

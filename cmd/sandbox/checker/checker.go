@@ -6,6 +6,7 @@ import (
 	"../../solution"
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -13,7 +14,7 @@ import (
 	exec "os/exec"
 	"strconv"
 	"strings"
-	"sync"
+	"syscall"
 	"time"
 )
 
@@ -135,6 +136,8 @@ func TestSolution(configuration *config.Config) {
 		if compileResult := compile(task, solutionConfiguration); compileResult.CodeReturn != 0 {
 			result := solution.NewResult(userSolution, false, compileResult.CodeReturn, "Compilation error", compileResult.TimeUsage, compileResult.MemoryUsage)
 			rabbit.PublishResult(solution.ResultToJson(result), configuration)
+
+			return
 		}
 	}
 
@@ -152,42 +155,17 @@ func TestSolution(configuration *config.Config) {
 
 	rabbit.PublishResult(solution.ResultToJson(result), configuration)
 
+	return
+
 }
 
 func compile(task *solution.Task, solutionConfiguration *SolutionConfiguration) *ProcessStat {
 	compilerPath, compileCommandArgs := getCompileCommandArgs(solutionConfiguration)
 
-	//startTime := time.Now()
-	//exitCode := 0
-	//
-	//
-	//
-	//if err := cmd.Start(); err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//cmdProcessPID := cmd.Process.Pid
-	//log.Printf("Process PID id %v\n", cmdProcessPID)
-	//
-	//done := make(chan error)
-	//go func() { done <- cmd.Wait() }()
-	//select {
-	//case err := <-done:
-	//	if exitError, ok := err.(*exec.ExitError); ok {
-	//		exitCode = exitError.ExitCode()
-	//	}
-	//	timeUsage = timeTrack(startTime)
-	//	messageOut = "Compilation error"
-	//case <-time.After(time.Duration(task.Options.TimeLimit) * time.Second):
-	//	timeUsage = timeTrack(startTime)
-	//	messageOut = "Timeout Expired"
-	//	exitCode = -1
-	//default:
-	//	timeUsage = timeTrack(startTime)
-	//	messageOut = "OK"
-	//}
 
-	processInfo := executeCommandWithArgs(string(compilerPath), "", "Compilation error", task.Options.TimeLimit, solutionConfiguration.DirectoryPath, strings.Fields(string(compileCommandArgs))...)
+	timeLimit, _ := strconv.Atoi(task.Options.TimeLimit) // TODO non-student error
+
+	processInfo := executeCommandWithArgs(string(compilerPath), "", "Compilation error", timeLimit, strings.Fields(string(compileCommandArgs))...)
 
 	log.Printf("Output is %s",string(processInfo.Output))
 
@@ -214,8 +192,10 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 	var cmdProcessPID int
 	var messageOut string
 
+	timeLimit, _ := strconv.Atoi(task.Options.TimeLimit) // TODO non-student error
+
+
 	runnerPath, runCommandArgs := getRunCommandArgs(solutionConfiguration)
-	exitCode := -404
 
 	log.Printf("Runner path: %v\n Runner args: %s", runnerPath, runCommandArgs)
 	var processStat ProcessStat
@@ -223,7 +203,7 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 	for index:= 0; index < len(task.Tests.Input); index++ {
 
 
-		precessInfo := executeCommandWithArgs(string(runnerPath), task.Tests.Input[index], "Runtime error", task.Options.TimeLimit, solutionConfiguration.DirectoryPath, strings.Fields(string(runCommandArgs))...)
+		precessInfo := executeCommandWithArgs(string(runnerPath), task.Tests.Input[index], "Runtime error", timeLimit, strings.Fields(string(runCommandArgs))...)
 
 		log.Printf("Output is %s",string(precessInfo.Output))
 
@@ -245,20 +225,25 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 
 		log.Printf("Correct out is %v", task.Tests.Output[index])
 
-		if string(precessInfo.Output) != task.Tests.Output[index] {
+		if precessInfo.MessageOut == "" {
+			if string(precessInfo.Output) != task.Tests.Output[index] {
 
-			messageOut = fmt.Sprintf("Wrong Answer. Test #%v", index + 1)
+				messageOut = fmt.Sprintf("Wrong Answer. Test #%v", index+1)
 
-			if precessInfo.ErrorMessage != "" {
-				messageOut = "Runtime error"
-				log.Printf("Error is %v", precessInfo.ErrorMessage)
+				processStat.PID = cmdProcessPID
+				processStat.CodeReturn = 409
+				processStat.MessageOut = messageOut
+				processStat.TimeUsage = fmt.Sprintf("%.6f", maxTimeUsage)
+				processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage, 10)
+
+				return &processStat
 			}
-
-			processStat.PID = cmdProcessPID
-			processStat.CodeReturn = exitCode
-			processStat.MessageOut = messageOut
+		}else {
+			processStat.PID = precessInfo.PID
+			processStat.CodeReturn = precessInfo.CodeReturn
+			processStat.MessageOut = precessInfo.MessageOut
 			processStat.TimeUsage = fmt.Sprintf("%.6f", maxTimeUsage)
-			processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage,10)
+			processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage, 10)
 
 			return &processStat
 		}
@@ -270,96 +255,131 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 	processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage,10)
 	processStat.TimeUsage = fmt.Sprintf("%.6f", maxTimeUsage)
 	processStat.MessageOut = "Correct answer"
-	processStat.CodeReturn = 0
+	processStat.CodeReturn = 200
 
 	return &processStat
 
 }
 
 
-func executeCommandWithArgs(runner string, input string, defaultMessageOutput string, timeLimit int, dirPath string, args ...string) processInfo {
+func executeCommandWithArgs(runner string, input string, defaultMessageOutput string, timeLimit int, args ...string) *processInfo {
 
-	var messageOut string
+	log.Printf("Timelimit is %v", timeLimit)
+	var messageOut string = ""
 	var timeUsage float64
-	exitCode := 1
+	var exitCode int
 
 	var stdout, stderr []byte
-	var errStdout, errStderr error
 
-	log.Printf("Runner is %s .Argument is %v", runner, args)
+	ctx := context.Background()
+
+	deadline, ok := ctx.Deadline()
+	duration := time.Duration(timeLimit) * time.Second
+	if ok {
+		duration = time.Until(deadline)
+	}
+
+	tCtx, cancel := context.WithTimeout(ctx, duration)
+	defer cancel()
+
 	cmd := exec.Command(runner, args...)
-	//cmd.Dir = dirPath
 
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	stdoutIn, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Panic(err)
-	}
+	stdoutIn, _ := cmd.StdoutPipe()
 
 	stderrIn, _ := cmd.StderrPipe()
 
-	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
-	}
-
-	if input != "" {
-
-		log.Printf("Input is %v", input)
-
-		var wg sync.WaitGroup
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			defer stdin.Close()
-			io.Copy(stdin, bytes.NewBufferString(input))
-		}()
-		go func() {
-			defer wg.Done()
-			stdout, errStdout = copyAndCapture(os.Stdout, stdoutIn)
-		}()
-		wg.Wait()
-
-	}
-
-	stderr, errStderr = copyAndCapture(os.Stderr, stderrIn)
-	log.Printf("Error is %v", errStderr)
-
 	cmdProcessPID := os.Getpid()
-	log.Printf("Process PID id %v\n", cmdProcessPID)
-
 	startTime := time.Now()
 
+	stdin, _ := cmd.StdinPipe()
+
+	go func() {
+		defer stdin.Close()
+		io.WriteString(stdin, input)
+	}()
+
+
+	if err := cmd.Start(); err != nil {
+		return &processInfo{
+			PID: cmdProcessPID,
+			CodeReturn: -1,
+			TimeUsage: timeTrack(startTime),
+			MessageOut: "",
+			ErrorMessage: "",
+			Output: []byte(defaultMessageOutput),
+		}
+	}
+
+
+	go func() {
+		stdout, _ = copyAndCapture(os.Stdout, stdoutIn)
+	}()
+
+	go func() {
+		stderr, _ = copyAndCapture(os.Stderr, stderrIn)
+	}()
+
 	done := make(chan error)
-	go func() { done <- cmd.Wait() }()
+
+	go func() {
+		err := cmd.Wait()
+		done <- err
+		close(done)
+	}()
+
+	var err error
+
 	select {
-	case err := <-done:
+	case <-tCtx.Done():
+		messageOut = "Timeout expired"
+		timeUsage = timeTrack(startTime)
+		exitCode = 527
+		_ = cmd.Process.Kill()
+		err = tCtx.Err()
+	case e := <-done:
+		err = e
 		if exitError, ok := err.(*exec.ExitError); ok {
 			exitCode = exitError.ExitCode()
 		}
 		messageOut = defaultMessageOutput
 		timeUsage = timeTrack(startTime)
-	case <-time.After(time.Duration(timeLimit) * time.Second):
-		timeUsage = timeTrack(startTime)
-		messageOut = "Timeout Expired"
-		exitCode = -1
-	default:
-		timeUsage = timeTrack(startTime)
 	}
 
-	output := []byte(string(stdout))
+	if tCtx.Err() == context.DeadlineExceeded {
+		messageOut = "Timeout expired"
+		timeUsage = timeTrack(startTime)
+		exitCode = 527
+		_ = cmd.Process.Kill()
+	}
 
-	return processInfo{
+
+
+	log.Printf(err.Error())
+
+	return &processInfo{
 		PID: cmdProcessPID,
 		CodeReturn: exitCode,
 		TimeUsage: timeUsage,
 		MessageOut: messageOut,
 		ErrorMessage: string(stderr),
-		Output: output,
+		Output: stdout,
 	}
+
+}
+
+func shutdown(gt *time.Timer, c *exec.Cmd) {
+	gt.Stop()
+	err := c.Process.Signal(syscall.SIGHUP)
+	if err != nil {
+		log.Printf("failed to signal to process: %s", err)
+	}
+	go func() {
+		time.Sleep(time.Second)
+		err = c.Process.Kill()
+		if err != nil {
+			log.Printf("failed to kill process: %s", err)
+		}
+	}()
 }
 
 func copyAndCapture(w io.Writer, r io.Reader) ([]byte, error) {

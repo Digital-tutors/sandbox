@@ -44,20 +44,10 @@ func Run(userSolution *solution.Solution, conf *config.Config) string {
 		panic(err)
 	}
 
-
-	//volumePath := fmt.Sprintf("%v:%s",  strings.TrimSuffix(conf.DockerSandbox.SourceFileStoragePath, "/"), strings.TrimSuffix(conf.DockerSandbox.TargetFileStoragePath, "/"))
-
 	volumePath := fmt.Sprintf("%v:%s",  strings.TrimSuffix(userSolution.DirectoryPath, "/"), strings.TrimSuffix(conf.DockerSandbox.TargetFileStoragePath, "/"))
 
 	log.Print(volumePath)
 
-	//myVolume, _ := cli.VolumeCreate(ctx, volume.VolumeCreateBody{
-	//	Name: "sandbox",
-	//	Driver: "local-persist",
-	//	DriverOpts: map[string]string{
-	//		"mountpoint": strings.TrimSuffix(userSolution.DirectoryPath, "/"),
-	//	},
-	//})
 
 	resp, err := cli.ContainerCreate(ctx,
 		&container.Config{
@@ -74,18 +64,11 @@ func Run(userSolution *solution.Solution, conf *config.Config) string {
 					Source: strings.TrimSuffix(userSolution.DirectoryPath, "/"),
 					Target: strings.TrimSuffix(conf.DockerSandbox.TargetFileStoragePath + userSolution.SolutionID, "/"),
 					ReadOnly: false,
-					//VolumeOptions: &mount.VolumeOptions{
-					//	DriverConfig: &mount.Driver{
-					//		Name: "local-persist",
-					//		Options: map[string]string{
-					//			"mountpoint": strings.TrimSuffix(userSolution.DirectoryPath, "/"),
-					//		},
-					//	},
-					//},
 				},
 			},
 			Resources: container.Resources{
-				Memory:     int64(userSolution.MemoryLimit * 1e+6),
+				//Memory:     int64(userSolution.MemoryLimit * 1e+6),
+				Memory:     int64(256 * 1e+6),
 				CpusetCpus: "0",
 			},
 			AutoRemove:  false,
@@ -136,7 +119,7 @@ func Run(userSolution *solution.Solution, conf *config.Config) string {
 	log.Printf("Status code is %v", statusCode)
 
 	switch statusCode {
-	case 139:
+	case 137:
 		conf.DockerSandbox.IsStarted = false
 		result := solution.NewResult(userSolution, false, 139, "Memory Expired", timeUsage.String(), ">"+string(userSolution.MemoryLimit))
 		rabbit.PublishResult(solution.ResultToJson(result), conf)
