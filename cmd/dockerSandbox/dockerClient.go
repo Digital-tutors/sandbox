@@ -121,7 +121,7 @@ func Run(userSolution *solution.Solution, conf *config.Config) string {
 	switch statusCode {
 	case 137:
 		conf.DockerSandbox.IsStarted = false
-		result := solution.NewResult(userSolution, false, 139, "Memory Expired", timeUsage.String(), ">"+string(userSolution.MemoryLimit))
+		result := solution.NewResult(userSolution, false, 139, "Memory Expired", timeUsage.String(), string(userSolution.MemoryLimit + 1))
 		rabbit.PublishResult(solution.ResultToJson(result), conf)
 		break
 	}
