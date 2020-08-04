@@ -74,9 +74,13 @@ func New() *Config {
 				"5672/tcp": 5672,
 			},
 			Images: map[string] string {
+				"clang": "autochecker-clang",
 				"cpp": "autochecker-cpp",
+				"csharp": "autochecker-csharp",
 				"python": "autochecker-student-python",
 				"java": "autochecker-java",
+				"kotlin": "autochecker-kotlin",
+				"golang": "autochecker-golang",
 			},
 			TargetFileStoragePath: getEnv("TARGET_FILE_STORAGE_PATH", ""),
 			SourceFileStoragePath: getEnv("CODE_STORAGE_PATH", ""),

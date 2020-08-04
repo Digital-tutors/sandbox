@@ -5,11 +5,12 @@ RUN apk add --no-cache 'su-exec>=0.2' && \
 	apk add --no-cache --update\
         bash \
         unzip \
-        openjdk11 \
+        openjdk11
 #Programmin language support
 	# Kotlin
 ENV     KOTLIN_VERSION=1.3.72 \
-        KOTLIN_HOME="/usr/local/kotlin"
+        KOTLIN_HOME=/usr/local/kotlin
+
 RUN     apk update && \
         apk add ca-certificates && \
         update-ca-certificates && \

@@ -4,13 +4,7 @@ RUN apk add --no-cache 'su-exec>=0.2'
 RUN echo "http://dl-4.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
 	apk add --no-cache --update\
         bash \
-        git \
-#Programmin language support
-	#Mono for C# support
-	    mono --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing && \
-        apk add --no-cache --virtual=.build-dependencies ca-certificates && \
-        cert-sync /etc/ssl/certs/ca-certificates.crt && \
-        apk del .build-dependencies
+        git
 # Sandbox workdir
 WORKDIR /sandbox
 # Translators configs

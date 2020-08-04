@@ -50,6 +50,7 @@ type processInfo struct {
 	CodeReturn int
 	TimeUsage float64
 	MessageOut string
+	MemoryUsage uint64
 	ErrorMessage string
 	Output []byte
 }
@@ -145,7 +146,7 @@ func TestSolution(configuration *config.Config) {
 
 	var completed bool
 
-	if runningResult.CodeReturn != 0 {
+	if runningResult.CodeReturn != 200 {
 		completed = false
 	}else {
 		completed = true
@@ -162,7 +163,6 @@ func TestSolution(configuration *config.Config) {
 func compile(task *solution.Task, solutionConfiguration *SolutionConfiguration) *ProcessStat {
 	compilerPath, compileCommandArgs := getCompileCommandArgs(solutionConfiguration)
 
-
 	timeLimit, _ := strconv.Atoi(task.Options.TimeLimit) // TODO non-student error
 
 	processInfo := executeCommandWithArgs(string(compilerPath), "", "Compilation error", timeLimit, strings.Fields(string(compileCommandArgs))...)
@@ -170,10 +170,13 @@ func compile(task *solution.Task, solutionConfiguration *SolutionConfiguration) 
 	log.Printf("Output is %s",string(processInfo.Output))
 
 
-	memoryUsage, err := calculateMemory(processInfo.PID)
-	if err != nil {
-		log.Print(err)
-	}
+	//memoryUsage, err := calculateMemory(processInfo.PID)
+	//if err != nil {
+	//	log.Print(err)
+	//}
+
+	memoryUsage := processInfo.MemoryUsage
+
 	log.Printf("Memory usage is %v", memoryUsage)
 
 	return &ProcessStat{
@@ -202,47 +205,53 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 
 	for index:= 0; index < len(task.Tests.Input); index++ {
 
+		startTime := time.Now()
 
-		precessInfo := executeCommandWithArgs(string(runnerPath), task.Tests.Input[index], "Runtime error", timeLimit, strings.Fields(string(runCommandArgs))...)
+		processInfo := executeCommandWithArgs(string(runnerPath), task.Tests.Input[index], "Runtime error", timeLimit, strings.Fields(string(runCommandArgs))...)
 
-		log.Printf("Output is %s",string(precessInfo.Output))
+		log.Printf("Output is %s",string(processInfo.Output))
 
-		if maxTimeUsage < precessInfo.TimeUsage {
-			maxTimeUsage = precessInfo.TimeUsage
+		if processInfo.TimeUsage == 0 {
+			processInfo.TimeUsage = timeTrack(startTime)
 		}
 
-		memory, err := calculateMemory(precessInfo.PID)
-		if err != nil {
-			log.Print(err)
+		if maxTimeUsage < processInfo.TimeUsage {
+			maxTimeUsage = processInfo.TimeUsage
 		}
 
-		if maxMemoryUsage < memory {
-			maxMemoryUsage = memory
+		//memory, err := calculateMemory(processInfo.PID)
+		//if err != nil {
+		//	log.Print(err)
+		//}
+
+		if maxMemoryUsage < processInfo.MemoryUsage {
+			maxMemoryUsage = processInfo.MemoryUsage
 		}
 
-		log.Println(string(precessInfo.Output))
-		log.Printf("Message out is %v", messageOut)
 
 		log.Printf("Correct out is %v", task.Tests.Output[index])
 
-		if precessInfo.MessageOut == "" {
-			if string(precessInfo.Output) != task.Tests.Output[index] {
+		if processInfo.CodeReturn == 0 {
+			if string(processInfo.Output) != task.Tests.Output[index] {
 
 				messageOut = fmt.Sprintf("Wrong Answer. Test #%v", index+1)
 
 				processStat.PID = cmdProcessPID
 				processStat.CodeReturn = 409
 				processStat.MessageOut = messageOut
-				processStat.TimeUsage = fmt.Sprintf("%.6f", maxTimeUsage)
+				processStat.TimeUsage = fmt.Sprintf("%.9f", maxTimeUsage)
 				processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage, 10)
 
 				return &processStat
 			}
 		}else {
-			processStat.PID = precessInfo.PID
-			processStat.CodeReturn = precessInfo.CodeReturn
-			processStat.MessageOut = precessInfo.MessageOut
-			processStat.TimeUsage = fmt.Sprintf("%.6f", maxTimeUsage)
+
+			log.Printf("Error is %v", processInfo.ErrorMessage)
+
+			processStat.PID = processInfo.PID
+			processStat.CodeReturn = processInfo.CodeReturn
+			processStat.MessageOut = processInfo.MessageOut
+			processStat.TimeUsage = fmt.Sprintf("%.9f", maxTimeUsage)
 			processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage, 10)
 
 			return &processStat
@@ -253,7 +262,7 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 
 	processStat.PID = cmdProcessPID
 	processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage,10)
-	processStat.TimeUsage = fmt.Sprintf("%.6f", maxTimeUsage)
+	processStat.TimeUsage = fmt.Sprintf("%.9f", maxTimeUsage)
 	processStat.MessageOut = "Correct answer"
 	processStat.CodeReturn = 200
 
@@ -265,11 +274,10 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 func executeCommandWithArgs(runner string, input string, defaultMessageOutput string, timeLimit int, args ...string) *processInfo {
 
 	log.Printf("Timelimit is %v", timeLimit)
-	var messageOut string = ""
+	var messageOut = ""
 	var timeUsage float64
 	var exitCode int
-
-	var stdout, stderr []byte
+	var memoryUsage uint64
 
 	ctx := context.Background()
 
@@ -282,13 +290,14 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 	tCtx, cancel := context.WithTimeout(ctx, duration)
 	defer cancel()
 
+	stdout := bytes.NewBuffer(nil)
+	stderr := bytes.NewBuffer(nil)
+
 	cmd := exec.Command(runner, args...)
 
-	stdoutIn, _ := cmd.StdoutPipe()
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
-	stderrIn, _ := cmd.StderrPipe()
-
-	cmdProcessPID := os.Getpid()
 	startTime := time.Now()
 
 	stdin, _ := cmd.StdinPipe()
@@ -298,26 +307,18 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 		io.WriteString(stdin, input)
 	}()
 
+	cmdProcessPID := os.Getegid()
 
 	if err := cmd.Start(); err != nil {
 		return &processInfo{
 			PID: cmdProcessPID,
 			CodeReturn: -1,
 			TimeUsage: timeTrack(startTime),
-			MessageOut: "",
-			ErrorMessage: "",
+			MessageOut: defaultMessageOutput,
+			ErrorMessage: defaultMessageOutput,
 			Output: []byte(defaultMessageOutput),
 		}
 	}
-
-
-	go func() {
-		stdout, _ = copyAndCapture(os.Stdout, stdoutIn)
-	}()
-
-	go func() {
-		stderr, _ = copyAndCapture(os.Stderr, stderrIn)
-	}()
 
 	done := make(chan error)
 
@@ -341,7 +342,13 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 		if exitError, ok := err.(*exec.ExitError); ok {
 			exitCode = exitError.ExitCode()
 		}
-		messageOut = defaultMessageOutput
+		if err != nil {
+			messageOut = defaultMessageOutput
+			exitCode = -1
+		}else {
+			messageOut = ""
+			exitCode = 0
+		}
 		timeUsage = timeTrack(startTime)
 	}
 
@@ -350,36 +357,22 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 		timeUsage = timeTrack(startTime)
 		exitCode = 527
 		_ = cmd.Process.Kill()
+		memoryUsage, _ = calculateMemory(os.Getpid())
+	} else {
+
+		memoryUsage = uint64(cmd.ProcessState.SysUsage().(*syscall.Rusage).Maxrss)
 	}
-
-
-
-	log.Printf(err.Error())
 
 	return &processInfo{
 		PID: cmdProcessPID,
 		CodeReturn: exitCode,
 		TimeUsage: timeUsage,
 		MessageOut: messageOut,
-		ErrorMessage: string(stderr),
-		Output: stdout,
+		MemoryUsage: memoryUsage,
+		ErrorMessage: stderr.String(),
+		Output: stdout.Bytes(),
 	}
 
-}
-
-func shutdown(gt *time.Timer, c *exec.Cmd) {
-	gt.Stop()
-	err := c.Process.Signal(syscall.SIGHUP)
-	if err != nil {
-		log.Printf("failed to signal to process: %s", err)
-	}
-	go func() {
-		time.Sleep(time.Second)
-		err = c.Process.Kill()
-		if err != nil {
-			log.Printf("failed to kill process: %s", err)
-		}
-	}()
 }
 
 func copyAndCapture(w io.Writer, r io.Reader) ([]byte, error) {
