@@ -1,6 +1,8 @@
 .idea
-.env
-checker
-sanbox/services/.env
-Dockerfile
-
+__pycache__
+cmd/.env
+*.env
+backup.txt
+*.exe
+storageFolder
+vendor

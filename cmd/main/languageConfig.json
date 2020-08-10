@@ -1,0 +1,128 @@
+{
+  "code_path": "/sandbox/target/",
+  "lang_configs": {
+    "c":
+    {
+      "name": "c",
+      "source_extension": ".c",
+      "is_compilable": true,
+      "is_need_compile": true,
+      "compiler": {
+        "path": "/usr/bin/gcc",
+        "compiler_args": "$source_file_full_name -o $file_full_name",
+        "executable_extension": ".exe"
+      },
+      "runner": "$file_full_name",
+      "runner_args": "",
+      "comments": {
+        "single_line_comment": "//.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
+    },
+    "cpp":
+    {
+      "name": "c++",
+      "source_extension": ".cpp",
+      "is_compilable": true,
+      "is_need_compile": true,
+      "compiler": {
+        "path": "/usr/bin/g++",
+        "compiler_args": "$source_file_full_name -o $file_full_name",
+        "executable_extension": ".exe"
+      },
+      "runner": "$file_full_name",
+      "runner_args": "",
+      "comments": {
+        "single_line_comment": "//.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
+    },
+    "csharp":
+    {
+      "name": "c#",
+      "source_extension": "mono",
+      "is_compilable": true,
+      "is_need_compile": true,
+      "compiler": {
+        "path": "mcs",
+        "compiler_args": "-out:$exec_file_full_name $source_file_full_name",
+        "executable_extension": ".exe"
+      },
+      "runner": "mono",
+      "runner_args": "$exec_file_full_name",
+      "comments": {
+        "single_line_comment": "//.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
+    },
+    "python":
+    {
+      "name": "python3",
+      "source_extension": ".py",
+      "is_compilable": false,
+      "is_need_compile": false,
+      "compiler": {
+        "path": "",
+        "compiler_args": "",
+        "executable_extension": ""
+      },
+      "runner": "/usr/bin/python3",
+      "runner_args": "$source_file_full_name",
+      "comments": {
+        "single_line_comment": "#.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
+    },
+    "kotlin": {
+      "name": "kotlin",
+      "source_extension": ".kt",
+      "is_compilable": true,
+      "is_need_compile": true,
+      "compiler": {
+        "path": "kotlinc",
+        "compiler_args": "$source_file_full_name -include-runtime -d $exec_file_full_name",
+        "executable_extension": ".jar"
+      },
+      "runner": "/usr/bin/java",
+      "runner_args": "-jar $exec_file_full_name",
+      "comments": {
+        "single_line_comment": "//.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
+    },
+    "java": {
+      "name": "java",
+      "source_extension": ".java",
+      "is_compilable": true,
+      "is_need_compile": false,
+      "compiler": {
+        "path": "javac",
+        "compiler_args": "$source_file_full_name",
+        "executable_extension": ".jar"
+      },
+      "runner": "java",
+      "runner_args": "$source_file_full_name",
+      "comments": {
+        "single_line_comment": "//.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
+    },
+    "go": {
+      "name": "go",
+      "source_extension": ".go",
+      "is_compilable": true,
+      "is_need_compile": false,
+      "compiler": {
+        "path": "go",
+        "compiler_args": "build $source_file_full_name",
+        "executable_extension": ".exe"
+      },
+      "runner": "go",
+      "runner_args": "run $source_file_full_name",
+      "comments": {
+        "single_line_comment": "//.*\n?",
+        "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
+      }
+    }
+  }
+}

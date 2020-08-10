@@ -1,4 +1,0 @@
-pika
-pymongo
-python-dotenv
-requests
