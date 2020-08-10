@@ -24,9 +24,11 @@ docker start my-rabbit
 | CODE_STORAGE_PATH | Путь к хранилищу решений на хосте. Тип: строка |
 | LANG_CONFIG_FILE_PATH | Путь к файлу конфигурации компиляторов на хосте. Тип: строка |
 | TASK_QUEUE | Наименование очереди решений в RabbitMQ. Тип: строка |
+| SUPPORT_QUEUE | Наименование очереди поддержки в RabbitMQ. Тип: строка |
 | QUEUE_EXCHANGE | Наименование exchange в RabbitMQ. Тип: строка |
 | RESULT_QUEUE | Наименование очереди результатов в RabbitMQ. Тип: строка |
 | AMQPS_SCHEME | AMQP/AMQPS URL в RabbitMQ. Тип: строка |
+|DOCKER_AMQPS_SCHEME | AMQP/AMQPS URL в RabbitMQ в контейнере. Тип: строка |
 | DOCKER_NETWORK_ID | ID сети DOCKER_NETWORK в docker. Тип: строка |
 | TARGET_FILE_STORAGE_PATH | Путь к хранилищу решений в контейнере. Тип: строка |
 | RABBIT_HOST_NAME | Наименование хоста контейнера RabbitMQ. Тип: строка |
@@ -58,3 +60,4 @@ sudo chmod +x prepare-images.sh
 | 200 | Success. Успешный запуск решения и прохождение всех тестов |
 | 409 | Conflict. Успешный запуск решения. Провален один из тестов |
 | -1 | Compilation error/Runtime error. Ошибка компиляции или запуска решения |
+| 1 | Ошибка работы системы. Сообщение отправлено в очередь поддержки |

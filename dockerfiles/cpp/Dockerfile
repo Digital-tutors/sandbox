@@ -4,7 +4,6 @@ RUN apk add --no-cache 'su-exec>=0.2'
 RUN echo "http://dl-4.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
 	apk add --no-cache --update\
         bash \
-        git \
 #Programmin language support
     # g++ (C++)
         g++

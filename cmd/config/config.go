@@ -8,8 +8,10 @@ type RabbitMQConfig struct {
 	TaskQueueName     string
 	ResultQueueName   string
 	QueueExchangeName string
+	SupportQueueName string
 	AMQPSScheme       string
 	RabbitMQContainerName string
+	DockerAMQPSScheme string
 }
 
 type DockerSandboxConfig struct {
@@ -48,7 +50,7 @@ func New() *Config {
 
 	isStarted := getEnv("IS_CONTAINER_STARTED", "false")
 
-	var isContainerStarted bool = false
+	var isContainerStarted = false
 
 	if isStarted == "true" {
 		isContainerStarted = true
@@ -63,6 +65,8 @@ func New() *Config {
 			QueueExchangeName: getEnv("QUEUE_EXCHANGE", "program"),
 			AMQPSScheme:       getEnv("AMQPS_SCHEME", "rabbit://guest:guest@localhost:5672/"),
 			RabbitMQContainerName: getEnv("RABBIT_HOST_NAME", "localhost"),
+			DockerAMQPSScheme: getEnv("DOCKER_AMQPS_SCHEME", "rabbit://guest:guest@localhost:5672/"),
+			SupportQueueName: getEnv("SUPPORT_QUEUE", "program.support"),
 		},
 
 		DockerSandbox: DockerSandboxConfig {
@@ -74,13 +78,13 @@ func New() *Config {
 				"5672/tcp": 5672,
 			},
 			Images: map[string] string {
-				"clang": "autochecker-clang",
+				"c": "autochecker-c",
 				"cpp": "autochecker-cpp",
 				"csharp": "autochecker-csharp",
-				"python": "autochecker-student-python",
+				"python": "autochecker-python",
 				"java": "autochecker-java",
 				"kotlin": "autochecker-kotlin",
-				"golang": "autochecker-golang",
+				"go": "autochecker-go",
 			},
 			TargetFileStoragePath: getEnv("TARGET_FILE_STORAGE_PATH", ""),
 			SourceFileStoragePath: getEnv("CODE_STORAGE_PATH", ""),

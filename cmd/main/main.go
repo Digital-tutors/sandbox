@@ -1,10 +1,10 @@
 package main
 
 import (
-	"../config"
-	"../dockerSandbox"
 	"github.com/joho/godotenv"
 	"log"
+	"sandbox/cmd/config"
+	"sandbox/cmd/dockerSandbox"
 )
 
 

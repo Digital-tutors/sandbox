@@ -1,12 +1,12 @@
 package rabbit
 
 import (
-	"../config"
 	"github.com/streadway/amqp"
 	"log"
+	"sandbox/cmd/config"
 )
 
-func PublishResult(result []byte,configuration *config.Config) {
+func PublishResult(result []byte,configuration *config.Config, queueName string) {
 	conn, err := amqp.Dial(configuration.RabbitMQ.AMQPSScheme)
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -28,7 +28,7 @@ func PublishResult(result []byte,configuration *config.Config) {
 
 	err = ch.Publish(
 		configuration.RabbitMQ.QueueExchangeName,         // exchange
-		configuration.RabbitMQ.ResultQueueName, // routing key
+		queueName, // routing key
 		false,
 		false,
 		amqp.Publishing{
@@ -37,5 +37,5 @@ func PublishResult(result []byte,configuration *config.Config) {
 		})
 	failOnError(err, "Failed to publish a message")
 
-	log.Printf(" [x] Sent %s", result)
+	log.Printf(" [x] Sent into queue %s, %s", queueName, result)
 }

@@ -1,13 +1,14 @@
 package solution
 
 import (
-	"../config"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"sandbox/cmd/config"
 	"strconv"
 	"strings"
 )
@@ -87,12 +88,12 @@ type Result struct {
 	Memory string `json:"memory"`
 }
 
-func FromByteArrayToSolutionStruct(message []byte) *Solution {
+func FromByteArrayToSolutionStruct(message []byte) (*Solution, error) {
 	var solution Solution
 
-	json.Unmarshal(message, &solution)
+	err := json.Unmarshal(message, &solution)
 
-	return &solution
+	return &solution, err
 }
 
 func ResultToJson(result *Result) []byte {
@@ -102,7 +103,7 @@ func ResultToJson(result *Result) []byte {
 }
 
 
-func GetTaskUsingGet(url string, taskID string) *Task {
+func GetTaskUsingGet(url string, taskID string) (*Task,error) {
 	var task *Task
 
 	newUrl := strings.Replace(url, "$taskID", taskID, -1)
@@ -110,24 +111,22 @@ func GetTaskUsingGet(url string, taskID string) *Task {
 	resp, err := http.Get(newUrl)
 
 	if err != nil {
-		log.Println(err)
-		panic(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Println(err)
-		panic(err)
 	}
 
 
-	json.Unmarshal(body, &task)
+	jsonError := json.Unmarshal(body, &task)
 
-	return task
+	return task, jsonError
 }
 
-func UpdateSolutionInstance(solution *Solution, conf *config.Config) {
+func UpdateSolutionInstance(solution *Solution, conf *config.Config) error {
 
 	var taskUrl string
 
@@ -137,20 +136,29 @@ func UpdateSolutionInstance(solution *Solution, conf *config.Config) {
 		taskUrl = conf.DockerSandbox.TaskStorageUrl
 	}
 
-	task := GetTaskUsingGet(taskUrl, solution.TaskID.ID)
+	task, err := GetTaskUsingGet(taskUrl, solution.TaskID.ID)
+
+	if task == nil {
+		return errors.New(fmt.Sprintf("task with id %v is not found", solution.TaskID.ID))
+	}
 
 	solution.MemoryLimit, _ = strconv.Atoi(task.Options.MemoryLimit)
 	solution.TimeLimit, _ = strconv.Atoi(task.Options.TimeLimit)
 	solution.FileName = solution.SolutionID
 	solution.DirectoryPath = conf.DockerSandbox.SourceFileStoragePath + solution.FileName + "/"
+
+	return err
 }
 
-func SaveSolutionInFile(solution *Solution, conf *config.Config) {
-	extension := getExtension(conf.CompilerConfiguration.ConfigurationFilePath, solution.Language)
+func SaveSolutionInFile(solution *Solution, conf *config.Config) error {
+	extension, configError := getExtension(conf.CompilerConfiguration.ConfigurationFilePath, solution.Language)
+	if configError != nil {
+		return configError
+	}
 
 	if err := ensureDir(solution.DirectoryPath); err != nil {
 		fmt.Println("Directory creation failed with error: " + err.Error())
-		os.Exit(1)
+		return err
 	}
 
 	filePath := solution.DirectoryPath + solution.FileName + extension
@@ -159,15 +167,20 @@ func SaveSolutionInFile(solution *Solution, conf *config.Config) {
 
 	if err != nil{
 		log.Println("Unable to create file:", err)
+		return err
 	}
 	defer file.Close()
 
-	file.WriteString(solution.SourceCode)
+	_, writingError := file.WriteString(solution.SourceCode)
+	if writingError != nil {
+		return writingError
+	}
 
 	err = os.Chmod(filePath, 0777)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
+	return err
 }
 
 func ensureDir(dirName string) error {
@@ -179,7 +192,7 @@ func ensureDir(dirName string) error {
 	}
 }
 
-func GetConfiguration(configurationFilePath string) LanguageConfiguration {
+func GetConfiguration(configurationFilePath string) (LanguageConfiguration, error) {
 	data, err := ioutil.ReadFile(configurationFilePath)
 	if err != nil {
 		log.Print(err)
@@ -192,14 +205,14 @@ func GetConfiguration(configurationFilePath string) LanguageConfiguration {
 		log.Println("error:", err)
 	}
 
-	return langConfig
+	return langConfig, err
 }
 
-func getExtension(configurationFilePath string, language string) string {
-	config := GetConfiguration(configurationFilePath)
+func getExtension(configurationFilePath string, language string) (string,error) {
+	configuration, err := GetConfiguration(configurationFilePath)
 
 
-	return config.LangConfigs[language].SourceExtension
+	return configuration.LangConfigs[language].SourceExtension, err
 }
 
 func DeleteSolution(directoryPath string) {

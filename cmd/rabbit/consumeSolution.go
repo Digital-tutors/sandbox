@@ -1,17 +1,18 @@
 package rabbit
 
 import (
-	"../config"
-	"../solution"
+	"fmt"
 	"github.com/streadway/amqp"
 	"log"
+	"sandbox/cmd/config"
+	"sandbox/cmd/solution"
 )
 
-type RunContainer func(userSolution *solution.Solution, conf *config.Config) string
+type RunContainer func(userSolution *solution.Solution, conf *config.Config) (string, error)
 
 func failOnError(err error, msg string) {
 	if err != nil {
-		log.Fatalf("%s: %s", msg, err)
+		log.Printf("%s: %s", msg, err)
 	}
 }
 
@@ -23,6 +24,7 @@ func ReceiveSolution(configuration *config.Config, Run RunContainer) {
 	ch, err := conn.Channel()
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
+
 
 	err = ch.ExchangeDeclare(
 		configuration.RabbitMQ.QueueExchangeName, // name
@@ -77,12 +79,36 @@ func ReceiveSolution(configuration *config.Config, Run RunContainer) {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
 
-			userSolution := solution.FromByteArrayToSolutionStruct(d.Body)
+			userSolution, err := solution.FromByteArrayToSolutionStruct(d.Body)
+			if err != nil {
+				PublishResult(d.Body, configuration, configuration.RabbitMQ.SupportQueueName)
+				log.Print(err)
+				d.Ack(false)
+				continue
+			}
 
-			solution.UpdateSolutionInstance(userSolution, configuration)
-			solution.SaveSolutionInFile(userSolution, configuration)
+			updateErr := solution.UpdateSolutionInstance(userSolution, configuration)
+			if updateErr != nil {
+				PublishResult([]byte(updateErr.Error() + fmt.Sprintf("SolutionID is %s. TaskID is %s. UserID is %s, SourceCode is %s",userSolution.SolutionID, userSolution.TaskID, userSolution.UserID, userSolution.SourceCode)), configuration, configuration.RabbitMQ.SupportQueueName)
+				log.Print(updateErr)
+				d.Ack(false)
+				continue
+			}
 
-			Run(userSolution, configuration)
+			savingError := solution.SaveSolutionInFile(userSolution, configuration)
+			if savingError != nil {
+				PublishResult([]byte(savingError.Error() + fmt.Sprintf("SolutionID is %s. TaskID is %s. UserID is %s, SourceCode is %s",userSolution.SolutionID, userSolution.TaskID, userSolution.UserID, userSolution.SourceCode)), configuration, configuration.RabbitMQ.SupportQueueName)
+				log.Print(savingError)
+				d.Ack(false)
+				continue
+			}
+
+			_, runError := Run(userSolution, configuration)
+			if runError != nil {
+				PublishResult([]byte(runError.Error() + fmt.Sprintf("SolutionID is %s. TaskID is %s. UserID is %s, SourceCode is %s",userSolution.SolutionID, userSolution.TaskID, userSolution.UserID, userSolution.SourceCode)), configuration, configuration.RabbitMQ.SupportQueueName)
+				log.Print(runError)
+			}
+
 			solution.DeleteSolution(configuration.DockerSandbox.SourceFileStoragePath + userSolution.FileName)
 
 			d.Ack(false)

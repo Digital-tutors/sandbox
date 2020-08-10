@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x #echo on
 
-Images=( 'clang' 'cpp' 'csharp' 'golang' 'java' 'kotlin' 'student-python')
+Images=( 'c' 'cpp' 'csharp' 'go' 'java' 'kotlin' 'python')
 
 for i in "${Images[@]}" ; do
   echo "Started building image: ${i}"

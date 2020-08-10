@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-type CompilatorPath string
+type CompilerPath string
 type CompilationArguments string
 type RunnerPath string
 type RunnerArguments string
@@ -55,9 +55,17 @@ type processInfo struct {
 	Output []byte
 }
 
+const (
+	compilationTime int = 45
+	timeoutExpiredCode int = 524
+	successCode int = 200
+	wrongAnswerCode int = 409
+)
+
 func prepareSolution(configuration *config.Config) *solution.Solution {
 
 	return &solution.Solution{
+		SolutionID: configuration.Solution.SolutionID,
 		Language: configuration.Solution.Language,
 		TaskID:   solution.TaskID {
 			ID: configuration.Solution.TaskID,
@@ -90,7 +98,7 @@ func prepareConfiguration(configuration *config.Config, userSolution *solution.S
 
 }
 
-func getCompileCommandArgs(solutionConfiguration *SolutionConfiguration) (CompilatorPath, CompilationArguments) {
+func getCompileCommandArgs(solutionConfiguration *SolutionConfiguration) (CompilerPath, CompilationArguments) {
 
 	compileCommand := strings.Replace(solutionConfiguration.CompilerPath, "$source_file_full_name", solutionConfiguration.SourceFilePath, -1)
 	compileCommand = strings.Replace(compileCommand, "$exec_file_full_name", solutionConfiguration.ExecutableFilePath, -1)
@@ -100,7 +108,7 @@ func getCompileCommandArgs(solutionConfiguration *SolutionConfiguration) (Compil
 	compileCommandArgs = strings.Replace(compileCommandArgs, "$exec_file_full_name", solutionConfiguration.ExecutableFilePath, -1)
 	compileCommandArgs = strings.Replace(compileCommandArgs, "$file_full_name", solutionConfiguration.CodePath, -1)
 
-	return CompilatorPath(compileCommand), CompilationArguments(compileCommandArgs)
+	return CompilerPath(compileCommand), CompilationArguments(compileCommandArgs)
 }
 
 func getRunCommandArgs(solutionConfiguration *SolutionConfiguration) (RunnerPath, RunnerArguments) {
@@ -134,9 +142,9 @@ func TestSolution(configuration *config.Config) {
 	log.Print(Exists(solutionConfiguration.SourceFilePath))
 
 	if solutionConfiguration.IsCompilable && solutionConfiguration.IsNeedCompile {
-		if compileResult := compile(task, solutionConfiguration); compileResult.CodeReturn != 0 {
-			result := solution.NewResult(userSolution, false, compileResult.CodeReturn, "Compilation error", compileResult.TimeUsage, compileResult.MemoryUsage)
-			rabbit.PublishResult(solution.ResultToJson(result), configuration)
+		if compileResult := compile(solutionConfiguration); compileResult.CodeReturn != 0 {
+			result := solution.NewResult(userSolution, false, compileResult.CodeReturn, compileResult.MessageOut, compileResult.TimeUsage, compileResult.MemoryUsage)
+			rabbit.PublishResult(solution.ResultToJson(result), configuration, configuration.RabbitMQ.ResultQueueName)
 
 			return
 		}
@@ -154,30 +162,23 @@ func TestSolution(configuration *config.Config) {
 
 	result := solution.NewResult(userSolution, completed, runningResult.CodeReturn, runningResult.MessageOut, runningResult.TimeUsage, runningResult.MemoryUsage)
 
-	rabbit.PublishResult(solution.ResultToJson(result), configuration)
+	rabbit.PublishResult(solution.ResultToJson(result), configuration, configuration.RabbitMQ.ResultQueueName)
 
 	return
 
 }
 
-func compile(task *solution.Task, solutionConfiguration *SolutionConfiguration) *ProcessStat {
+func compile(solutionConfiguration *SolutionConfiguration) *ProcessStat {
 	compilerPath, compileCommandArgs := getCompileCommandArgs(solutionConfiguration)
 
-	timeLimit, _ := strconv.Atoi(task.Options.TimeLimit) // TODO non-student error
+	processInfo := executeCommandWithArgs(string(compilerPath), "", "Compilation error", compilationTime, strings.Fields(string(compileCommandArgs))...)
 
-	processInfo := executeCommandWithArgs(string(compilerPath), "", "Compilation error", timeLimit, strings.Fields(string(compileCommandArgs))...)
-
-	log.Printf("Output is %s",string(processInfo.Output))
-
-
-	//memoryUsage, err := calculateMemory(processInfo.PID)
-	//if err != nil {
-	//	log.Print(err)
-	//}
 
 	memoryUsage := processInfo.MemoryUsage
 
-	log.Printf("Memory usage is %v", memoryUsage)
+	log.Printf("Compilation memory usage is %v", memoryUsage)
+	log.Printf("Compilation time usage is %v", fmt.Sprintf("%.6f", processInfo.TimeUsage))
+
 
 	return &ProcessStat{
 		PID: processInfo.PID,
@@ -219,11 +220,6 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 			maxTimeUsage = processInfo.TimeUsage
 		}
 
-		//memory, err := calculateMemory(processInfo.PID)
-		//if err != nil {
-		//	log.Print(err)
-		//}
-
 		if maxMemoryUsage < processInfo.MemoryUsage {
 			maxMemoryUsage = processInfo.MemoryUsage
 		}
@@ -237,7 +233,7 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 				messageOut = fmt.Sprintf("Wrong Answer. Test #%v", index+1)
 
 				processStat.PID = cmdProcessPID
-				processStat.CodeReturn = 409
+				processStat.CodeReturn = wrongAnswerCode
 				processStat.MessageOut = messageOut
 				processStat.TimeUsage = fmt.Sprintf("%.9f", maxTimeUsage)
 				processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage, 10)
@@ -264,7 +260,7 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 	processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage,10)
 	processStat.TimeUsage = fmt.Sprintf("%.9f", maxTimeUsage)
 	processStat.MessageOut = "Correct answer"
-	processStat.CodeReturn = 200
+	processStat.CodeReturn = successCode
 
 	return &processStat
 
@@ -300,11 +296,18 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 
 	startTime := time.Now()
 
-	stdin, _ := cmd.StdinPipe()
+	stdin, stdinErr := cmd.StdinPipe()
+	if stdinErr != nil {
+		log.Print(stdinErr)
+	}
 
 	go func() {
 		defer stdin.Close()
-		io.WriteString(stdin, input)
+		_, writeStringErr := io.WriteString(stdin, input)
+
+		if writeStringErr != nil {
+			log.Print(writeStringErr)
+		}
 	}()
 
 	cmdProcessPID := os.Getegid()
@@ -334,7 +337,7 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 	case <-tCtx.Done():
 		messageOut = "Timeout expired"
 		timeUsage = timeTrack(startTime)
-		exitCode = 527
+		exitCode = timeoutExpiredCode
 		_ = cmd.Process.Kill()
 		err = tCtx.Err()
 	case e := <-done:
@@ -355,12 +358,16 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 	if tCtx.Err() == context.DeadlineExceeded {
 		messageOut = "Timeout expired"
 		timeUsage = timeTrack(startTime)
-		exitCode = 527
+		exitCode = timeoutExpiredCode
 		_ = cmd.Process.Kill()
 		memoryUsage, _ = calculateMemory(os.Getpid())
 	} else {
 
 		memoryUsage = uint64(cmd.ProcessState.SysUsage().(*syscall.Rusage).Maxrss)
+	}
+
+	if exitCode == timeoutExpiredCode {
+		messageOut = "Timeout expired"
 	}
 
 	return &processInfo{
@@ -373,31 +380,6 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 		Output: stdout.Bytes(),
 	}
 
-}
-
-func copyAndCapture(w io.Writer, r io.Reader) ([]byte, error) {
-	var out []byte
-	buf := make([]byte, 1024, 1024)
-	for {
-		n, err := r.Read(buf[:])
-		if n > 0 {
-			d := buf[:n]
-			out = append(out, d...)
-			_, err := w.Write(d)
-			if err != nil {
-				log.Printf("Out is %v, error is %v", string(out), err)
-				return out, err
-			}
-		}
-		if err != nil {
-			log.Printf("error is %v", err)
-			// Read returns io.EOF at the end of file, which is not an error for us
-			if err == io.EOF {
-				err = nil
-			}
-			return out, err
-		}
-	}
 }
 
 func calculateMemory(pid int) (uint64, error) {

@@ -107,7 +107,7 @@
         "multi_line_comment": "/\\*(?:[^*]|\\*(?!\/))*(?:\\*/)?"
       }
     },
-    "golang": {
+    "go": {
       "name": "go",
       "source_extension": ".go",
       "is_compilable": true,

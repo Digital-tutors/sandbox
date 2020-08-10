@@ -5,3 +5,4 @@ cmd/.env
 backup.txt
 *.exe
 storageFolder
+vendor
