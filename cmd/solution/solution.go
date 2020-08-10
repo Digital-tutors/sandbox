@@ -215,11 +215,12 @@ func getExtension(configurationFilePath string, language string) (string,error) 
 	return configuration.LangConfigs[language].SourceExtension, err
 }
 
-func DeleteSolution(directoryPath string) {
+func DeleteSolution(directoryPath string) error {
 	err := os.RemoveAll(directoryPath)
 	if err != nil {
 		log.Print(err)
 	}
+	return err
 }
 
 func NewResult(solution *Solution, completed bool, codeReturn int, messageOut string, runtime string, memory string) *Result {

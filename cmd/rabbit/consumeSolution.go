@@ -99,6 +99,11 @@ func ReceiveSolution(configuration *config.Config, Run RunContainer) {
 			if savingError != nil {
 				PublishResult([]byte(savingError.Error() + fmt.Sprintf("SolutionID is %s. TaskID is %s. UserID is %s, SourceCode is %s",userSolution.SolutionID, userSolution.TaskID, userSolution.UserID, userSolution.SourceCode)), configuration, configuration.RabbitMQ.SupportQueueName)
 				log.Print(savingError)
+				deleteErr := solution.DeleteSolution(configuration.DockerSandbox.SourceFileStoragePath + userSolution.FileName)
+				if deleteErr != nil {
+					PublishResult([]byte(deleteErr.Error() + fmt.Sprintf("SolutionID is %s. TaskID is %s. UserID is %s, SourceCode is %s",userSolution.SolutionID, userSolution.TaskID, userSolution.UserID, userSolution.SourceCode)), configuration, configuration.RabbitMQ.SupportQueueName)
+				}
+
 				d.Ack(false)
 				continue
 			}
@@ -109,7 +114,10 @@ func ReceiveSolution(configuration *config.Config, Run RunContainer) {
 				log.Print(runError)
 			}
 
-			solution.DeleteSolution(configuration.DockerSandbox.SourceFileStoragePath + userSolution.FileName)
+			deleteErr := solution.DeleteSolution(configuration.DockerSandbox.SourceFileStoragePath + userSolution.FileName)
+			if deleteErr != nil {
+				PublishResult([]byte(deleteErr.Error() + fmt.Sprintf("SolutionID is %s. TaskID is %s. UserID is %s, SourceCode is %s",userSolution.SolutionID, userSolution.TaskID, userSolution.UserID, userSolution.SourceCode)), configuration, configuration.RabbitMQ.SupportQueueName)
+			}
 
 			d.Ack(false)
 		}

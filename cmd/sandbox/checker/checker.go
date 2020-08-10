@@ -78,7 +78,10 @@ func prepareSolution(configuration *config.Config) *solution.Solution {
 }
 
 func prepareConfiguration(configuration *config.Config, userSolution *solution.Solution) *SolutionConfiguration {
-	languageConfiguration := solution.GetConfiguration(configuration.Solution.ConfigurationFilePath)
+	languageConfiguration, configErr := solution.GetConfiguration(configuration.Solution.ConfigurationFilePath)
+	if configErr != nil {
+		log.Print(configErr)
+	}
 
 	directoryPath := configuration.DockerSandbox.TargetFileStoragePath + userSolution.FileName
 	codePath := directoryPath + "/" + userSolution.FileName
@@ -136,7 +139,10 @@ func TestSolution(configuration *config.Config) {
 
 
 	userSolution := prepareSolution(configuration)
-	task := solution.GetTaskUsingGet(configuration.DockerSandbox.DockerUrlOfTaskStorage,userSolution.TaskID.ID)
+	task, taskErr := solution.GetTaskUsingGet(configuration.DockerSandbox.DockerUrlOfTaskStorage,userSolution.TaskID.ID)
+	if taskErr != nil {
+		log.Print(taskErr)
+	}
 	solutionConfiguration := prepareConfiguration(configuration, userSolution)
 
 	log.Print(Exists(solutionConfiguration.SourceFilePath))
