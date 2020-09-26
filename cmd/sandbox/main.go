@@ -1,8 +1,8 @@
 package main
 
 import (
-	"../config"
-	"./checker"
+	"sandbox/cmd/config"
+	"sandbox/cmd/sandbox/checker"
 )
 
 

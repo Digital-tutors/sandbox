@@ -1,9 +1,6 @@
 package checker
 
 import (
-	"../../config"
-	"../../rabbit"
-	"../../solution"
 	"bufio"
 	"bytes"
 	"context"
@@ -12,6 +9,9 @@ import (
 	"log"
 	"os"
 	exec "os/exec"
+	"sandbox/cmd/config"
+	"sandbox/cmd/rabbit"
+	"sandbox/cmd/solution"
 	"strconv"
 	"strings"
 	"syscall"
@@ -139,7 +139,7 @@ func TestSolution(configuration *config.Config) {
 
 
 	userSolution := prepareSolution(configuration)
-	task, taskErr := solution.GetTaskUsingGet(configuration.DockerSandbox.DockerUrlOfTaskStorage,userSolution.TaskID.ID)
+	task, taskErr := solution.NewTaskFromEnv(configuration)
 	if taskErr != nil {
 		log.Print(taskErr)
 	}
@@ -277,9 +277,9 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 
 	log.Printf("Timelimit is %v", timeLimit)
 	var messageOut = ""
-	var timeUsage float64
+	var timeUsage float64 = 0
 	var exitCode int
-	var memoryUsage uint64
+	var memoryUsage uint64 = 0
 
 	ctx := context.Background()
 

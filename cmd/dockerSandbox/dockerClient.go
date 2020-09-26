@@ -35,6 +35,11 @@ func Run(userSolution *solution.Solution, conf *config.Config) (string, error) {
 	isStarted := "IS_CONTAINER_STARTED=true"
 	dockerTaskStorageUrl := fmt.Sprintf("DOCKER_URL_OF_TASK_STORAGE=%v", conf.DockerSandbox.DockerUrlOfTaskStorage)
 	targetFileStoragePath := fmt.Sprintf("TARGET_FILE_STORAGE_PATH=%v", conf.DockerSandbox.TargetFileStoragePath)
+	taskInputs := fmt.Sprintf("TASK_TEST_INPUTS=%v", strings.Join(conf.TaskConfiguration.Tests.Input, conf.TaskTestsSeparator))
+	taskOutputs := fmt.Sprintf("TASK_TEST_OUTPUTS=%v", strings.Join(conf.TaskConfiguration.Tests.Output, conf.TaskTestsSeparator))
+	taskConstructions := fmt.Sprintf("TASK_CONSTRUCTIONS=%v", strings.Join(conf.TaskConfiguration.Options.Constructions, conf.TaskTestsSeparator))
+	taskTimeLimit := fmt.Sprintf("TASK_TIME_LIMIT=%v", conf.TaskConfiguration.Options.TimeLimit)
+	taskMemoryLimit := fmt.Sprintf("TASK_MEMORY_LIMIT=%v", conf.TaskConfiguration.Options.MemoryLimit)
 
 	ctx := context.Background()
 	cli, cliErr := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -53,7 +58,7 @@ func Run(userSolution *solution.Solution, conf *config.Config) (string, error) {
 		&container.Config {
 		Image: conf.DockerSandbox.Images[userSolution.Language],
 		User:  strconv.Itoa(os.Getuid()),
-		Env:   []string{language, fileName, taskID, userID, solutionID, resultQueue, languageConfigs, isStarted, dockerTaskStorageUrl, scheme, targetFileStoragePath},
+		Env:   []string{language, fileName, taskID, userID, solutionID, resultQueue, languageConfigs, isStarted, dockerTaskStorageUrl, scheme, targetFileStoragePath, taskInputs, taskOutputs, taskMemoryLimit, taskTimeLimit, taskConstructions},
 		Tty:   true,
 	},
 		&container.HostConfig{
@@ -73,7 +78,7 @@ func Run(userSolution *solution.Solution, conf *config.Config) (string, error) {
 				CpusetCpus: "1",
 			},
 			AutoRemove:  false,
-			NetworkMode: container.NetworkMode(map[bool]string{true: "host", false: "none"}[true]),
+			NetworkMode: container.NetworkMode(map[bool]string{true: "host", false: "none"}[false]),
 		}, nil, "")
 
 	if containerCreationErr != nil {

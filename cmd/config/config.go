@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 )
 
 type RabbitMQConfig struct {
@@ -39,12 +40,32 @@ type SolutionConfig struct {
 	ConfigurationFilePath string
 }
 
+type Options struct {
+	Constructions []string
+	TimeLimit     string
+	MemoryLimit   string
+}
+
+type Tests struct {
+	Input  []string
+	Output []string
+}
+
+type TaskConfig struct {
+	Options Options
+	Tests   Tests
+}
+
 type Config struct {
+	TaskTestsSeparator string
 	RabbitMQ RabbitMQConfig
 	DockerSandbox DockerSandboxConfig
 	CompilerConfiguration CompilerConfig
 	Solution SolutionConfig
+	TaskConfiguration TaskConfig
 }
+
+const taskStringsSeparators = "_&^&||%$&_"
 
 func New() *Config {
 
@@ -59,6 +80,7 @@ func New() *Config {
 	}
 
 	return &Config{
+		TaskTestsSeparator: taskStringsSeparators,
 		RabbitMQ: RabbitMQConfig {
 			TaskQueueName:     getEnv("TASK_QUEUE", "program.tasks"),
 			ResultQueueName:   getEnv("RESULT_QUEUE", "program.result"),
@@ -105,6 +127,18 @@ func New() *Config {
 			ConfigurationFilePath: getEnv("SANDBOX_LANG_CONFIG_FILE_PATH", "languageConfig.json"),
 		},
 
+		TaskConfiguration: TaskConfig{
+			Tests: Tests {
+				Input: getEnvAsSlice("TASK_TEST_INPUTS", []string{""}, taskStringsSeparators),
+				Output: getEnvAsSlice("TASK_TEST_OUTPUTS", []string{""}, taskStringsSeparators),
+			},
+			Options: Options{
+				Constructions: getEnvAsSlice("TASK_CONSTRUCTIONS", []string{""}, taskStringsSeparators),
+				TimeLimit: getEnv("TASK_TIME_LIMIT", "15"),
+				MemoryLimit: getEnv("TASK_MEMORY_LIMIT", "256"),
+			},
+		},
+
 	}
 }
 
@@ -114,4 +148,16 @@ func getEnv(key string, defaultValue string) string {
 	}
 
 	return defaultValue
+}
+
+func getEnvAsSlice(name string, defaultVal []string, sep string) []string {
+	valStr := getEnv(name, "")
+
+	if valStr == "" {
+		return defaultVal
+	}
+
+	val := strings.Split(valStr, sep)
+
+	return val
 }
