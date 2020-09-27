@@ -3,10 +3,6 @@ package dockerSandbox
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/client"
 	"io"
 	"log"
 	"os"
@@ -16,6 +12,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/client"
 )
 
 func ReceiveSolutions(conf *config.Config) {
@@ -48,56 +49,55 @@ func Run(userSolution *solution.Solution, conf *config.Config) (string, error) {
 		return "", cliErr
 	}
 
-	volumePath := fmt.Sprintf("%v:%s",  strings.TrimSuffix(userSolution.DirectoryPath, "/"), strings.TrimSuffix(conf.DockerSandbox.TargetFileStoragePath, "/"))
+	volumePath := fmt.Sprintf("%v:%s", strings.TrimSuffix(userSolution.DirectoryPath, "/"), strings.TrimSuffix(conf.DockerSandbox.TargetFileStoragePath, "/"))
 
 	log.Print(volumePath)
 
 	oomKillDisable := false
 
 	resp, containerCreationErr := cli.ContainerCreate(ctx,
-		&container.Config {
-		Image: conf.DockerSandbox.Images[userSolution.Language],
-		User:  strconv.Itoa(os.Getuid()),
-		Env:   []string{language, fileName, taskID, userID, solutionID, resultQueue, languageConfigs, isStarted, dockerTaskStorageUrl, scheme, targetFileStoragePath, taskInputs, taskOutputs, taskMemoryLimit, taskTimeLimit, taskConstructions},
-		Tty:   true,
-	},
+		&container.Config{
+			Image: conf.DockerSandbox.Images[userSolution.Language],
+			User:  strconv.Itoa(os.Getuid()),
+			Env:   []string{language, fileName, taskID, userID, solutionID, resultQueue, languageConfigs, isStarted, dockerTaskStorageUrl, scheme, targetFileStoragePath, taskInputs, taskOutputs, taskMemoryLimit, taskTimeLimit, taskConstructions},
+			Tty:   true,
+		},
 		&container.HostConfig{
 			VolumeDriver: "local-persist",
 			Mounts: []mount.Mount{
 				{
-					Type:   mount.TypeBind,
-					Source: strings.TrimSuffix(userSolution.DirectoryPath, "/"),
-					Target: strings.TrimSuffix(conf.DockerSandbox.TargetFileStoragePath + userSolution.SolutionID, "/"),
+					Type:     mount.TypeBind,
+					Source:   strings.TrimSuffix(userSolution.DirectoryPath, "/"),
+					Target:   strings.TrimSuffix(conf.DockerSandbox.TargetFileStoragePath+userSolution.SolutionID, "/"),
 					ReadOnly: false,
 				},
 			},
 			Resources: container.Resources{
-				Memory: int64(userSolution.MemoryLimit * 1e+6),
+				Memory:         int64(userSolution.MemoryLimit * 1e+6),
 				MemorySwap:     int64(userSolution.MemoryLimit * 1e+6),
 				OomKillDisable: &oomKillDisable,
-				CpusetCpus: "1",
+				CpusetCpus:     "1",
 			},
 			AutoRemove:  false,
-			NetworkMode: container.NetworkMode(map[bool]string{true: "host", false: "none"}[false]),
-		}, nil, "")
+			NetworkMode: container.NetworkMode("bridge"),
+		}, nil, nil, "")
 
 	if containerCreationErr != nil {
 		log.Print(containerCreationErr)
 		return cli.ClientVersion(), containerCreationErr
 	}
 
-	//error := cli.NetworkConnect(ctx, conf.DockerSandbox.NetworkID, resp.ID, nil)
-	//if error != nil {
-	//	log.Print("Cannot connect to the network")
-	//	panic(error)
-	//}
+	error := cli.NetworkConnect(ctx, conf.DockerSandbox.NetworkID, resp.ID, nil)
+	if error != nil {
+		log.Print("Cannot connect to the network")
+		panic(error)
+	}
 
 	startTime := time.Now()
 	if startError := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); startError != nil {
 		log.Print(startError)
 		return cli.ClientVersion(), startError
 	}
-
 
 	var statusCode int64 = -1
 	var timeUsage time.Duration
@@ -130,12 +130,11 @@ func Run(userSolution *solution.Solution, conf *config.Config) (string, error) {
 	}
 
 	log.Printf("Status code is %v", statusCode)
-	
 
 	switch statusCode {
 	case 137:
 		conf.DockerSandbox.IsStarted = false
-		result := solution.NewResult(userSolution, false, 139, "Memory Expired", timeUsage.String(), string(userSolution.MemoryLimit + 1))
+		result := solution.NewResult(userSolution, false, 139, "Memory Expired", timeUsage.String(), string(userSolution.MemoryLimit+1))
 		rabbit.PublishResult(solution.ResultToJson(result), conf, conf.RabbitMQ.ResultQueueName)
 		break
 	case 0:
