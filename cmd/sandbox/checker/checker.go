@@ -23,7 +23,6 @@ type CompilationArguments string
 type RunnerPath string
 type RunnerArguments string
 
-
 type SolutionConfiguration struct {
 	DirectoryPath      string
 	SourceFilePath     string
@@ -33,44 +32,44 @@ type SolutionConfiguration struct {
 	IsNeedCompile      bool
 	CompilerPath       string
 	CompilerArgs       string
-	Runner         	   string
+	Runner             string
 	RunnerArgs         string
 }
 
 type ProcessStat struct {
-	PID int
-	CodeReturn int
+	PID         int
+	CodeReturn  int
 	MemoryUsage string
-	TimeUsage string
-	MessageOut string
+	TimeUsage   string
+	MessageOut  string
 }
 
 type processInfo struct {
-	PID int
-	CodeReturn int
-	TimeUsage float64
-	MessageOut string
-	MemoryUsage uint64
+	PID          int
+	CodeReturn   int
+	TimeUsage    float64
+	MessageOut   string
+	MemoryUsage  uint64
 	ErrorMessage string
-	Output []byte
+	Output       []byte
 }
 
 const (
-	compilationTime int = 45
+	compilationTime    int = 45
 	timeoutExpiredCode int = 524
-	successCode int = 200
-	wrongAnswerCode int = 409
+	successCode        int = 200
+	wrongAnswerCode    int = 409
 )
 
 func prepareSolution(configuration *config.Config) *solution.Solution {
 
 	return &solution.Solution{
 		SolutionID: configuration.Solution.SolutionID,
-		Language: configuration.Solution.Language,
-		TaskID:   solution.TaskID {
+		Language:   configuration.Solution.Language,
+		TaskID: solution.TaskID{
 			ID: configuration.Solution.TaskID,
 		},
-		UserID:   solution.UserID {
+		UserID: solution.UserID{
 			ID: configuration.Solution.UserID,
 		},
 		FileName: configuration.Solution.FileName,
@@ -94,8 +93,8 @@ func prepareConfiguration(configuration *config.Config, userSolution *solution.S
 		IsNeedCompile:      languageConfiguration.LangConfigs[userSolution.Language].IsNeedCompile,
 		CompilerPath:       languageConfiguration.LangConfigs[userSolution.Language].Compiler.Path,
 		CompilerArgs:       languageConfiguration.LangConfigs[userSolution.Language].Compiler.CompilerArgs,
-		Runner:         languageConfiguration.LangConfigs[userSolution.Language].Runner,
-		RunnerArgs: languageConfiguration.LangConfigs[userSolution.Language].RunnerArguments,
+		Runner:             languageConfiguration.LangConfigs[userSolution.Language].Runner,
+		RunnerArgs:         languageConfiguration.LangConfigs[userSolution.Language].RunnerArguments,
 		CodePath:           codePath, //file full name
 	}
 
@@ -117,11 +116,11 @@ func getCompileCommandArgs(solutionConfiguration *SolutionConfiguration) (Compil
 func getRunCommandArgs(solutionConfiguration *SolutionConfiguration) (RunnerPath, RunnerArguments) {
 	runCommandArgs := strings.Replace(solutionConfiguration.RunnerArgs, "$source_file_full_name", solutionConfiguration.SourceFilePath, -1)
 	runCommandArgs = strings.Replace(runCommandArgs, "$exec_file_full_name", solutionConfiguration.ExecutableFilePath, -1)
-	runCommandArgs =  strings.Replace(runCommandArgs, "$file_full_name", solutionConfiguration.CodePath, -1)
+	runCommandArgs = strings.Replace(runCommandArgs, "$file_full_name", solutionConfiguration.CodePath, -1)
 
 	runCommand := strings.Replace(solutionConfiguration.Runner, "$source_file_full_name", solutionConfiguration.SourceFilePath, -1)
 	runCommand = strings.Replace(runCommand, "$exec_file_full_name", solutionConfiguration.ExecutableFilePath, -1)
-	runCommand =  strings.Replace(runCommand, "$file_full_name", solutionConfiguration.CodePath, -1)
+	runCommand = strings.Replace(runCommand, "$file_full_name", solutionConfiguration.CodePath, -1)
 
 	return RunnerPath(runCommand), RunnerArguments(runCommandArgs)
 }
@@ -137,9 +136,8 @@ func Exists(name string) bool {
 
 func TestSolution(configuration *config.Config) {
 
-
 	userSolution := prepareSolution(configuration)
-	task, taskErr := solution.NewTaskFromEnv(configuration)
+	task, taskErr := solution.GetTaskUsingGet(configuration.DockerSandbox.DockerUrlOfTaskStorage, userSolution.TaskID.ID)
 	if taskErr != nil {
 		log.Print(taskErr)
 	}
@@ -162,7 +160,7 @@ func TestSolution(configuration *config.Config) {
 
 	if runningResult.CodeReturn != 200 {
 		completed = false
-	}else {
+	} else {
 		completed = true
 	}
 
@@ -179,19 +177,17 @@ func compile(solutionConfiguration *SolutionConfiguration) *ProcessStat {
 
 	processInfo := executeCommandWithArgs(string(compilerPath), "", "Compilation error", compilationTime, strings.Fields(string(compileCommandArgs))...)
 
-
 	memoryUsage := processInfo.MemoryUsage
 
 	log.Printf("Compilation memory usage is %v", memoryUsage)
 	log.Printf("Compilation time usage is %v", fmt.Sprintf("%.6f", processInfo.TimeUsage))
 
-
 	return &ProcessStat{
-		PID: processInfo.PID,
-		CodeReturn: processInfo.CodeReturn,
+		PID:         processInfo.PID,
+		CodeReturn:  processInfo.CodeReturn,
 		MemoryUsage: strconv.FormatUint(memoryUsage, 10),
-		TimeUsage:  fmt.Sprintf("%.6f", processInfo.TimeUsage),
-		MessageOut: processInfo.MessageOut,
+		TimeUsage:   fmt.Sprintf("%.6f", processInfo.TimeUsage),
+		MessageOut:  processInfo.MessageOut,
 	}
 }
 
@@ -204,19 +200,18 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 
 	timeLimit, _ := strconv.Atoi(task.Options.TimeLimit) // TODO non-student error
 
-
 	runnerPath, runCommandArgs := getRunCommandArgs(solutionConfiguration)
 
 	log.Printf("Runner path: %v\n Runner args: %s", runnerPath, runCommandArgs)
 	var processStat ProcessStat
 
-	for index:= 0; index < len(task.Tests.Input); index++ {
+	for index := 0; index < len(task.Tests.Input); index++ {
 
 		startTime := time.Now()
 
 		processInfo := executeCommandWithArgs(string(runnerPath), task.Tests.Input[index], "Runtime error", timeLimit, strings.Fields(string(runCommandArgs))...)
 
-		log.Printf("Output is %s",string(processInfo.Output))
+		log.Printf("Output is %s", string(processInfo.Output))
 
 		if processInfo.TimeUsage == 0 {
 			processInfo.TimeUsage = timeTrack(startTime)
@@ -229,7 +224,6 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 		if maxMemoryUsage < processInfo.MemoryUsage {
 			maxMemoryUsage = processInfo.MemoryUsage
 		}
-
 
 		log.Printf("Correct out is %v", task.Tests.Output[index])
 
@@ -246,7 +240,7 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 
 				return &processStat
 			}
-		}else {
+		} else {
 
 			log.Printf("Error is %v", processInfo.ErrorMessage)
 
@@ -259,11 +253,10 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 			return &processStat
 		}
 
-
 	}
 
 	processStat.PID = cmdProcessPID
-	processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage,10)
+	processStat.MemoryUsage = strconv.FormatUint(maxMemoryUsage, 10)
 	processStat.TimeUsage = fmt.Sprintf("%.9f", maxTimeUsage)
 	processStat.MessageOut = "Correct answer"
 	processStat.CodeReturn = successCode
@@ -272,14 +265,13 @@ func runOnTests(task *solution.Task, solutionConfiguration *SolutionConfiguratio
 
 }
 
-
 func executeCommandWithArgs(runner string, input string, defaultMessageOutput string, timeLimit int, args ...string) *processInfo {
 
 	log.Printf("Timelimit is %v", timeLimit)
 	var messageOut = ""
-	var timeUsage float64 = 0
+	var timeUsage float64
 	var exitCode int
-	var memoryUsage uint64 = 0
+	var memoryUsage uint64
 
 	ctx := context.Background()
 
@@ -320,12 +312,12 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 
 	if err := cmd.Start(); err != nil {
 		return &processInfo{
-			PID: cmdProcessPID,
-			CodeReturn: -1,
-			TimeUsage: timeTrack(startTime),
-			MessageOut: defaultMessageOutput,
+			PID:          cmdProcessPID,
+			CodeReturn:   -1,
+			TimeUsage:    timeTrack(startTime),
+			MessageOut:   defaultMessageOutput,
 			ErrorMessage: defaultMessageOutput,
-			Output: []byte(defaultMessageOutput),
+			Output:       []byte(defaultMessageOutput),
 		}
 	}
 
@@ -354,7 +346,7 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 		if err != nil {
 			messageOut = defaultMessageOutput
 			exitCode = -1
-		}else {
+		} else {
 			messageOut = ""
 			exitCode = 0
 		}
@@ -377,13 +369,13 @@ func executeCommandWithArgs(runner string, input string, defaultMessageOutput st
 	}
 
 	return &processInfo{
-		PID: cmdProcessPID,
-		CodeReturn: exitCode,
-		TimeUsage: timeUsage,
-		MessageOut: messageOut,
-		MemoryUsage: memoryUsage,
+		PID:          cmdProcessPID,
+		CodeReturn:   exitCode,
+		TimeUsage:    timeUsage,
+		MessageOut:   messageOut,
+		MemoryUsage:  memoryUsage,
 		ErrorMessage: stderr.String(),
-		Output: stdout.Bytes(),
+		Output:       stdout.Bytes(),
 	}
 
 }

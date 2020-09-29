@@ -145,13 +145,6 @@ func UpdateSolutionInstance(solution *Solution, conf *config.Config) error {
 	solution.FileName = solution.SolutionID
 	solution.DirectoryPath = conf.DockerSandbox.SourceFileStoragePath + solution.FileName + "/"
 	solution.Constructions = task.Options.Constructions
-
-	conf.TaskConfiguration.Options.MemoryLimit = task.Options.MemoryLimit
-	conf.TaskConfiguration.Options.TimeLimit = task.Options.TimeLimit
-	conf.TaskConfiguration.Options.Constructions = task.Options.Constructions
-	conf.TaskConfiguration.Tests.Input = task.Tests.Input
-	conf.TaskConfiguration.Tests.Output = task.Tests.Output
-
 	return err
 }
 
@@ -238,19 +231,4 @@ func NewResult(solution *Solution, completed bool, codeReturn int, messageOut st
 		Runtime:    runtime,
 		Memory:     memory,
 	}
-}
-
-func NewTaskFromEnv(conf *config.Config) (*Task, error) {
-	return &Task{
-			TaskID: conf.Solution.TaskID,
-			Tests: Tests {
-				Input: conf.TaskConfiguration.Tests.Input,
-				Output: conf.TaskConfiguration.Tests.Output,
-			},
-			Options: Options{
-				Constructions: conf.TaskConfiguration.Options.Constructions,
-				TimeLimit: conf.TaskConfiguration.Options.TimeLimit,
-				MemoryLimit: conf.TaskConfiguration.Options.MemoryLimit,
-			},
-		}, nil
 }
