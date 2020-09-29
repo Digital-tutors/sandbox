@@ -9,17 +9,17 @@ RUN echo "http://dl-4.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositor
     #Python 3
         python3
 # Sandbox workdir
-WORKDIR /sandbox
+WORKDIR $GOPATH/src/sandbox
 # Translators configs
-COPY /cmd/sandbox /sandbox/sandbox
-COPY /cmd/main/languageConfig.json /sandbox/sandbox/languageConfig.json
-COPY /cmd/rabbit /sandbox/rabbit
-COPY /cmd/config /sandbox/config
-COPY /cmd/solution /sandbox/solution
+COPY /cmd/sandbox $GOPATH/src/sandbox/cmd/sandbox
+COPY /cmd/main/languageConfig.json $GOPATH/src/sandbox/cmd/sandbox/languageConfig.json
+COPY /cmd/rabbit/publishResult.go $GOPATH/src/sandbox/cmd/rabbit/publishResult.go
+COPY /cmd/config $GOPATH/src/sandbox/cmd/config
+COPY /cmd/solution $GOPATH/src/sandbox/cmd/solution
 
 ENV GOCACHE="/tmp/.cache"
 
 RUN go get "github.com/streadway/amqp"
-RUN chmod +x /sandbox/sandbox/main.go
-CMD go run /sandbox/sandbox/main.go
+RUN mkdir /target && chmod -R 777 /target
+CMD go run $GOPATH/src/sandbox/cmd/sandbox/main.go
 #test 

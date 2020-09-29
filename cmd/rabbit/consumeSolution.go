@@ -12,12 +12,6 @@ import (
 
 type RunContainer func(userSolution *solution.Solution, conf *config.Config) (string, error)
 
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Printf("%s: %s", msg, err)
-	}
-}
-
 func ReceiveSolution(configuration *config.Config, Run RunContainer) {
 	conn, err := amqp.Dial(configuration.RabbitMQ.AMQPSScheme)
 	failOnError(err, "Failed to connect to RabbitMQ")
@@ -116,7 +110,7 @@ func ReceiveSolution(configuration *config.Config, Run RunContainer) {
 				log.Print(savingError)
 				deleteErr := solution.DeleteSolution(configuration.DockerSandbox.SourceFileStoragePath + userSolution.FileName)
 				if deleteErr != nil {
-					PublishResult([]byte(deleteErr.Error() + fmt.Sprintf("SolutionID is %s. TaskID is %s. UserID is %s, SourceCode is %s",userSolution.SolutionID, userSolution.TaskID, userSolution.UserID, userSolution.SourceCode)), configuration, configuration.RabbitMQ.SupportQueueName)
+					PublishResult([]byte(deleteErr.Error()+fmt.Sprintf("SolutionID is %s. TaskID is %s. UserID is %s, SourceCode is %s", userSolution.SolutionID, userSolution.TaskID, userSolution.UserID, userSolution.SourceCode)), configuration, configuration.RabbitMQ.SupportQueueName)
 				}
 
 				d.Ack(false)
@@ -131,7 +125,7 @@ func ReceiveSolution(configuration *config.Config, Run RunContainer) {
 
 			deleteErr := solution.DeleteSolution(configuration.DockerSandbox.SourceFileStoragePath + userSolution.FileName)
 			if deleteErr != nil {
-				PublishResult([]byte(deleteErr.Error() + fmt.Sprintf("SolutionID is %s. TaskID is %s. UserID is %s, SourceCode is %s",userSolution.SolutionID, userSolution.TaskID, userSolution.UserID, userSolution.SourceCode)), configuration, configuration.RabbitMQ.SupportQueueName)
+				PublishResult([]byte(deleteErr.Error()+fmt.Sprintf("SolutionID is %s. TaskID is %s. UserID is %s, SourceCode is %s", userSolution.SolutionID, userSolution.TaskID, userSolution.UserID, userSolution.SourceCode)), configuration, configuration.RabbitMQ.SupportQueueName)
 			}
 
 			d.Ack(false)
